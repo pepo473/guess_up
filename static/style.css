@@ -1,0 +1,161 @@
+/* استدعاء خط تجوال العربي من جوجل */
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap');
+
+body { 
+    font-family: 'Tajawal', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    text-align: center; 
+    /* خلفية متدرجة عصرية */
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+    color: #333; 
+    margin: 0; 
+    padding: 20px; 
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.container { 
+    background-color: rgba(255, 255, 255, 0.95); 
+    max-width: 420px; 
+    width: 100%;
+    padding: 40px 30px; 
+    border-radius: 20px; 
+    box-shadow: 0 15px 30px rgba(0,0,0,0.2); 
+    box-sizing: border-box;
+    
+    /* امسح السطر القديم (fadeIn 0.6s) وحط ده مكانه */
+    animation: fadeInUp 0.8s ease-out; 
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+h2 { color: #2d3748; font-weight: 900; margin-top: 0; margin-bottom: 5px; font-size: 28px; }
+.dev-name { color: #718096; font-size: 14px; margin-bottom: 25px; font-weight: 700; }
+
+input { 
+    width: 100%; 
+    padding: 15px; 
+    margin: 10px 0 20px 0; 
+    border-radius: 12px; 
+    border: 2px solid #e2e8f0; 
+    font-size: 16px; 
+    box-sizing: border-box;
+    font-family: 'Tajawal', sans-serif;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+}
+
+button { 
+    width: 100%; 
+    padding: 15px; 
+    margin: 8px 0; 
+    border-radius: 12px; 
+    border: none; 
+    cursor: pointer; 
+    font-weight: bold; 
+    font-size: 16px; 
+    font-family: 'Tajawal', sans-serif;
+    transition: all 0.3s ease; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+button:active { transform: scale(0.96); } /* تأثير الضغطة */
+button:hover { box-shadow: 0 8px 15px rgba(0,0,0,0.15); transform: translateY(-2px); }
+
+/* ألوان الأزرار المتدرجة */
+.btn-create { background: linear-gradient(to right, #48bb78, #38a169); color: white; }
+.join-btn { background: linear-gradient(to right, #4299e1, #3182ce); color: white; }
+.btn-higher { background: linear-gradient(to right, #f56565, #e53e3e); color: white; }
+.btn-lower { background: linear-gradient(to right, #4fd1c5, #38b2ac); color: white; }
+.btn-correct { background: linear-gradient(to right, #ecc94b, #d69e2e); color: white; }
+
+#game-room, #secret-number-section, #play-section, #guesser-ui, #answerer-ui, #game-over-section { display: none; }
+#game-over-section {
+    /* أنميشن الفرقعة عند الفوز */
+    animation: popIn 0.6s cubic-bezier(0.26, 0.53, 0.74, 1.48);
+}
+#cheat-warning-msg {
+    color: white; 
+    background: #e53e3e; 
+    font-weight: bold; 
+    display: none; 
+    padding: 12px; 
+    border-radius: 8px; 
+    margin-top: 15px;
+    /* أنميشن الاهتزاز عند الغش */
+    animation: shake 0.4s ease-in-out;
+}
+
+#shared-result { 
+    background: #ebf8ff; 
+    border-right: 5px solid #3182ce; 
+    padding: 15px; 
+    border-radius: 8px; 
+    margin-bottom: 20px; 
+    text-align: right;
+    animation: slideIn 0.4s ease;
+}
+#shared-result p { margin: 0; color: #2b6cb0; font-weight: bold; font-size: 15px; }
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+#status { 
+    padding: 15px; 
+    background: #edf2f7; 
+    border-radius: 12px; 
+    color: #4a5568;
+    font-weight: bold;
+    animation: pulse 2s infinite; 
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+
+.room-badge {
+    background: #fed7d7;
+    color: #c53030;
+    padding: 5px 20px;
+    border-radius: 20px;
+    font-size: 24px;
+    font-weight: 900;
+    display: inline-block;
+    margin-bottom: 15px;
+    letter-spacing: 2px;
+}
+/* --- الأنميشن الجديد (Keyframes) --- */
+
+/* أنميشن الظهور من الأسفل */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* أنميشن الاهتزاز عند الغش */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+}
+
+/* أنميشن "الفرقعة" الاحتفالية لشاشة النهاية */
+@keyframes popIn {
+    0% { transform: scale(0.5); opacity: 0; }
+    80% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+}

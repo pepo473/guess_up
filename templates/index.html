@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لعبة GuessUp</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</head>
+<body>
+
+    <div class="container" id="lobby">
+        <h2>🎮 لعبة GuessUp</h2>
+        <p class="dev-name">تطوير المبرمج: عبد الرحمن حمزه</p>
+        
+        <input type="text" id="player-name" placeholder="👤 اكتب اسمك هنا الأول...">
+        <button class="btn-create" onclick="createRoom()">➕ إنشاء غرفة جديدة</button>
+        
+        <div style="margin: 25px 0; display: flex; align-items: center; justify-content: center;">
+            <div style="flex: 1; height: 1px; background: #e2e8f0;"></div>
+            <span style="padding: 0 15px; color: #a0aec0; font-weight: bold; font-size: 14px;">أو</span>
+            <div style="flex: 1; height: 1px; background: #e2e8f0;"></div>
+        </div>
+        
+        <input type="text" id="room-code" placeholder="🔑 أدخل كود الغرفة (للانضمام)">
+        <button class="join-btn" onclick="joinRoom()">🚀 انضمام للغرفة</button>
+    </div>
+
+    <div class="container" id="game-room">
+        <h2>غرفة رقم</h2>
+        <div class="room-badge" id="display-room-code"></div>
+        <p class="dev-name">تطوير المبرمج: عبد الرحمن حمزه</p>
+        
+        <div id="status">⏳ في انتظار اللاعب الثاني...</div>
+
+        <div id="secret-number-section">
+            <h3 style="color: #38a169; font-size: 24px;">🔥 اللاعب الثاني وصل!</h3>
+            <p style="color: #4a5568; font-weight: bold; margin-bottom: 15px;">اختار رقمك السري عشان صاحبك يخمنه:</p>
+            <input type="number" id="secret-input" placeholder="مثال: 500">
+            <button class="btn-create" onclick="submitSecret()">🔒 تأكيد وحفظ الرقم</button>
+        </div>
+
+        <div id="play-section">
+            <h3 id="turn-message" style="color: #3182ce; margin-bottom: 20px;"></h3>
+            
+            <div id="shared-result">
+                <p id="result-text"></p>
+            </div>
+            
+            <div id="guesser-ui">
+                <input type="number" id="guess-input" placeholder="🤔 خمن الرقم هنا...">
+                <button class="btn-create" onclick="sendGuess()">إرسال التخمين</button>
+            </div>
+            
+            <div id="answerer-ui">
+                <p style="color: #4a5568; font-weight: bold; font-size: 18px;"><span id="guesser-name-display" style="color: #3182ce;"></span> خمن رقم:</p>
+                <div style="font-size: 45px; color: #805ad5; font-weight: 900; margin: 10px 0;">
+                    <span id="received-guess"></span>
+                </div>
+                <p style="color: #718096; font-size: 15px; margin-bottom: 15px;">الرقم ده بالنسبة لرقمك السري:</p>
+                
+                <button class="btn-higher" onclick="sendAnswer('أعلى')">🔼 أعلى</button>
+                <button class="btn-lower" onclick="sendAnswer('أقل')">🔽 أقل</button>
+                <button class="btn-correct" onclick="sendAnswer('أيوة ده رقمي')">✅ أيوة ده رقمي!</button>
+                
+                <p id="cheat-warning-msg" style="color: white; background: #e53e3e; font-weight: bold; display: none; padding: 12px; border-radius: 8px; margin-top: 15px;"></p>
+            </div>
+        </div>
+
+        <div id="game-over-section">
+            <h2 style="color: #38a169; font-size: 36px; margin-bottom: 10px;">🎉 انتهت اللعبة!</h2>
+            <h3 id="winner-message" style="color: #2d3748; line-height: 1.6;"></h3>
+            
+            <button class="join-btn" onclick="location.reload()" style="margin-top: 25px;">🔄 العب مرة تانية</button>
+        </div>
+    </div>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+</body>
+</html>
