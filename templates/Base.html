@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Guess Up 🎯{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --card: #1a1a26;
+            --border: #2a2a3a;
+            --accent: #7c3aed;
+            --accent2: #f59e0b;
+            --green: #10b981;
+            --red: #ef4444;
+            --text: #e2e8f0;
+            --muted: #64748b;
+            --glow: 0 0 20px rgba(124,58,237,0.4);
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            background-image:
+                radial-gradient(ellipse at 20% 20%, rgba(124,58,237,0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(245,158,11,0.05) 0%, transparent 50%);
+        }
+
+        nav {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+        }
+
+        .nav-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 0.9rem;
+        }
+
+        .points-badge {
+            background: linear-gradient(135deg, var(--accent), #5b21b6);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 32px 16px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--text);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-family: 'Cairo', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #5b21b6);
+            color: white;
+            box-shadow: var(--glow);
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 30px rgba(124,58,237,0.6); }
+
+        .btn-gold {
+            background: linear-gradient(135deg, var(--accent2), #d97706);
+            color: white;
+        }
+        .btn-gold:hover { transform: translateY(-2px); }
+
+        .btn-green {
+            background: linear-gradient(135deg, var(--green), #059669);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--red), #b91c1c);
+            color: white;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+        .btn-ghost:hover { background: var(--surface); }
+
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+        .input {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: var(--text);
+            font-family: 'Cairo', sans-serif;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .input:focus { border-color: var(--accent); }
+
+        .alert {
+            padding: 14px 18px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+        .alert-error { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
+        .alert-success { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #6ee7b7; }
+        .alert-info { background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.3); color: #c4b5fd; }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000;
+        }
+        .modal {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 36px;
+            max-width: 480px;
+            width: 90%;
+            text-align: center;
+            animation: popIn 0.3s ease;
+        }
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .hidden { display: none !important; }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px; left: 50%;
+            transform: translateX(-50%);
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 24px;
+            font-weight: 600;
+            z-index: 2000;
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp {
+            from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+            to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+    <body>
+        <div style="text-align: center; font-weight: 300; color: #a0a0a0; font-size: 13px; padding-top: 8px;">
+            المبرمج عبد الرحمن حمزه
+        </div>
+    <nav>
+        <a href="/" class="nav-logo">🎯 Guess Up</a>
+        <div class="nav-info">
+            {% if session.player_name %}
+                <span>👤 {{ session.player_name }}</span>
+                <span class="points-badge">
+                    💰 <span id="nav-points">{{ player.points if player else '' }}</span>
+                </span>
+                <a href="/leaderboard" class="btn btn-ghost" style="padding:6px 12px;font-size:0.8rem">🏆 ترتيب</a>
+                <a href="/logout" class="btn btn-ghost" style="padding:6px 12px;font-size:0.8rem;color:var(--red)">خروج 🚪</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    {% block content %}{% endblock %}
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

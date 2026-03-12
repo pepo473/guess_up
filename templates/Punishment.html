@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}العقاب - Guess Up{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:500px;padding-top:60px">
+    <div class="card" style="text-align:center;padding:40px">
+        <div style="font-size:3.5rem;margin-bottom:16px">😈</div>
+        <h2 style="font-size:1.6rem;font-weight:900;margin-bottom:8px">اكتب عقاب الخاسر</h2>
+        <p style="color:var(--muted);margin-bottom:28px">الخاسر: <strong style="color:var(--accent2)">{{ loser.player_name }}</strong></p>
+
+        <form action="/punishment/{{ room.room_code }}" method="POST">
+            <div style="text-align:right;margin-bottom:14px">
+                <label style="display:block;margin-bottom:6px;font-weight:600;color:var(--muted);font-size:0.9rem">العقاب</label>
+                <textarea name="punishment_text" class="input" rows="4"
+                    placeholder="مثال: تجيب لنا عشاء، تعمل حاجة مضحكة..."
+                    required></textarea>
+            </div>
+            <div style="text-align:right;margin-bottom:20px">
+                <label style="display:block;margin-bottom:6px;font-weight:600;color:var(--muted);font-size:0.9rem">رقم واتساب للتواصل</label>
+                <input type="tel" name="whatsapp" class="input" placeholder="01012345678" required>
+            </div>
+            <button type="submit" class="btn btn-danger" style="width:100%;font-size:1.1rem;padding:14px">
+                إرسال العقاب 🔥
+            </button>
+        </form>
+        <a href="/lobby" style="display:block;margin-top:12px;color:var(--muted);font-size:0.9rem">تخطي وارجع للوبي</a>
+    </div>
+</div>
+{% endblock %}

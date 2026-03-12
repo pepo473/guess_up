@@ -1,0 +1,296 @@
+{% extends 'base.html' %}
+{% block title %}اللوبي - Guess Up{% endblock %}
+
+{% block extra_css %}
+<style>
+    .lobby-header {
+        text-align: center;
+        padding: 32px 0 24px;
+    }
+    .lobby-header h1 { font-size: 1.8rem; font-weight: 900; }
+    .points-display {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: linear-gradient(135deg, rgba(124,58,237,0.2), rgba(245,158,11,0.15));
+        border: 1px solid rgba(124,58,237,0.4);
+        border-radius: 20px;
+        padding: 12px 28px;
+        font-size: 1.5rem;
+        font-weight: 900;
+        margin-top: 12px;
+    }
+
+    .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+    @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .action-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 24px;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: center;
+    }
+    .action-card:hover {
+        border-color: var(--accent);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 30px rgba(124,58,237,0.2);
+    }
+    .action-card .icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .action-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
+    .action-card p { color: var(--muted); font-size: 0.85rem; }
+
+    .bankrupt-section {
+        background: linear-gradient(135deg, rgba(239,68,68,0.1), rgba(239,68,68,0.05));
+        border: 1px solid rgba(239,68,68,0.3);
+        border-radius: 16px;
+        padding: 24px;
+        text-align: center;
+    }
+    .bankrupt-section h3 { color: #fca5a5; margin-bottom: 8px; font-size: 1.2rem; }
+    .bankrupt-section p { color: var(--muted); font-size: 0.9rem; margin-bottom: 16px; }
+
+    /* Modal forms */
+    .modal-form .form-group { margin-bottom: 16px; text-align: right; }
+    .modal-form label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.9rem; color: var(--muted); }
+    .modal-form h2 { margin-bottom: 20px; font-size: 1.3rem; }
+
+    .bet-options {
+        display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0;
+    }
+    .bet-chip {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 6px 14px;
+        cursor: pointer;
+        font-family: 'Cairo', sans-serif;
+        font-size: 0.9rem;
+        color: var(--text);
+        transition: all 0.15s;
+    }
+    .bet-chip:hover, .bet-chip.active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: white;
+    }
+
+    .section-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--muted);
+        margin-bottom: 14px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="lobby-header">
+        <h1>🎮 اللوبي</h1>
+        <div class="points-display">
+            💰 {{ player.points }} نقطة
+        </div>
+    </div>
+
+    {% if bankrupt %}
+    <!-- وضع المفلسين -->
+    <div class="bankrupt-section">
+        <h3>😅 وضع المفلسين</h3>
+        <p>نقاطك وصلت صفر! مفيش مشكلة — النظام بيديك فرصة تعدي</p>
+        <button onclick="openBankruptModal()" class="btn btn-danger">
+            🔥 العب وضع 50 نقطة
+        </button>
+    </div>
+    {% else %}
+    <!-- خيارات اللعب العادية -->
+    <div class="section-title">اختار نوع اللعبة</div>
+    <div class="grid-2">
+        <div class="action-card" onclick="openCreateModal()">
+            <div class="icon">🏠</div>
+            <h3>إنشاء غرفة</h3>
+            <p>افتح غرفة وانتظر صاحبك</p>
+        </div>
+        <div class="action-card" onclick="openJoinModal()">
+            <div class="icon">🚪</div>
+            <h3>الدخول لغرفة</h3>
+            <p>ادخل كود الغرفة والعب</p>
+        </div>
+        <div class="action-card" onclick="startBotGame()">
+            <div class="icon">🤖</div>
+            <h3>العب ضد الكمبيوتر</h3>
+            <p>خمن الرقم السري للكمبيوتر</p>
+        </div>
+        <a href="/leaderboard" class="action-card" style="text-decoration:none">
+            <div class="icon">🏆</div>
+            <h3>قائمة الترتيب</h3>
+            <p>شوف أقوى اللاعبين</p>
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal إنشاء غرفة -->
+<div id="createModal" class="modal-overlay hidden">
+    <div class="modal modal-form">
+        <h2>🏠 إنشاء غرفة جديدة</h2>
+        <div class="form-group">
+            <label>الرهان (نقط)</label>
+            <div class="bet-options">
+                <button class="bet-chip active" onclick="setBet(100, this)">100</button>
+                <button class="bet-chip" onclick="setBet(200, this)">200</button>
+                <button class="bet-chip" onclick="setBet(500, this)">500</button>
+                <button class="bet-chip" onclick="setBet(1000, this)">1000</button>
+            </div>
+            <input type="number" id="betInput" class="input" value="100" min="100" placeholder="أو اكتب عدد النقط">
+        </div>
+        <div id="createError" class="alert alert-error hidden"></div>
+        <div style="display:flex;gap:10px;margin-top:20px">
+            <button onclick="createRoom()" class="btn btn-primary" style="flex:1">إنشاء الغرفة</button>
+            <button onclick="closeModals()" class="btn btn-ghost">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal الدخول لغرفة -->
+<div id="joinModal" class="modal-overlay hidden">
+    <div class="modal modal-form">
+        <h2>🚪 الدخول لغرفة</h2>
+        <div class="form-group">
+            <label>كود الغرفة</label>
+            <input type="text" id="roomCodeInput" class="input" placeholder="مثال: ABC123" maxlength="6" style="text-align:center;font-size:1.3rem;letter-spacing:4px">
+        </div>
+        <div id="joinError" class="alert alert-error hidden"></div>
+        <div style="display:flex;gap:10px;margin-top:20px">
+            <button onclick="joinRoom()" class="btn btn-green" style="flex:1">دخول</button>
+            <button onclick="closeModals()" class="btn btn-ghost">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal وضع المفلسين -->
+<div id="bankruptModal" class="modal-overlay hidden">
+    <div class="modal modal-form">
+        <h2>🔥 وضع المفلسين</h2>
+        <div class="alert alert-info">
+            كل مباراة = 50 نقطة من النظام<br>
+            النقط دي مش بتتخصم منك — الفايز بياخدها بشكل كامل!
+        </div>
+        <div class="form-group">
+            <label>كود الغرفة (لو عايز تنضم لصاحبك)</label>
+            <input type="text" id="bankruptCode" class="input" placeholder="اتركه فاضي لو عايز تفتح غرفة جديدة">
+        </div>
+        <div id="bankruptError" class="alert alert-error hidden"></div>
+        <div style="display:flex;gap:10px;margin-top:20px">
+            <button onclick="playBankrupt()" class="btn btn-danger" style="flex:1">العب!</button>
+            <button onclick="closeModals()" class="btn btn-ghost">إلغاء</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function setBet(amount, el) {
+    document.getElementById('betInput').value = amount;
+    document.querySelectorAll('.bet-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+}
+
+function openCreateModal() { document.getElementById('createModal').classList.remove('hidden'); }
+function openJoinModal() { document.getElementById('joinModal').classList.remove('hidden'); }
+function openBankruptModal() { document.getElementById('bankruptModal').classList.remove('hidden'); }
+function closeModals() {
+    ['createModal','joinModal','bankruptModal'].forEach(id =>
+        document.getElementById(id).classList.add('hidden')
+    );
+}
+
+async function createRoom() {
+    const bet = document.getElementById('betInput').value;
+    const errEl = document.getElementById('createError');
+
+    const form = new FormData();
+    form.append('bet_points', bet);
+
+    const res = await fetch('/create_room', { method: 'POST', body: form });
+    const data = await res.json();
+
+    if (data.error) {
+        errEl.textContent = data.error;
+        errEl.classList.remove('hidden');
+        return;
+    }
+    window.location.href = '/room/' + data.room_code;
+}
+
+async function joinRoom() {
+    const code = document.getElementById('roomCodeInput').value.trim().toUpperCase();
+    const errEl = document.getElementById('joinError');
+
+    if (!code) { errEl.textContent = 'اكتب كود الغرفة'; errEl.classList.remove('hidden'); return; }
+
+    const form = new FormData();
+    form.append('room_code', code);
+
+    const res = await fetch('/join_room_route', { method: 'POST', body: form });
+    const data = await res.json();
+
+    if (data.error) {
+        errEl.textContent = data.error;
+        errEl.classList.remove('hidden');
+        return;
+    }
+    window.location.href = '/room/' + data.room_code;
+}
+
+async function playBankrupt() {
+    const code = document.getElementById('bankruptCode').value.trim().toUpperCase();
+    const errEl = document.getElementById('bankruptError');
+
+    if (code) {
+        // انضم لغرفة موجودة
+        const form = new FormData();
+        form.append('room_code', code);
+        const res = await fetch('/join_room_route', { method: 'POST', body: form });
+        const data = await res.json();
+        if (data.error) { errEl.textContent = data.error; errEl.classList.remove('hidden'); return; }
+        window.location.href = '/room/' + data.room_code;
+    } else {
+        // افتح غرفة جديدة وضع مفلسين
+        const form = new FormData();
+        form.append('bet_points', 50);
+        form.append('bankrupt_mode', '1');
+        const res = await fetch('/create_room', { method: 'POST', body: form });
+        const data = await res.json();
+        if (data.error) { errEl.textContent = data.error; errEl.classList.remove('hidden'); return; }
+        window.location.href = '/room/' + data.room_code;
+    }
+}
+
+async function startBotGame() {
+    const form = new FormData();
+    form.append('bet_points', 0);
+    form.append('bot_game', '1');
+    const res = await fetch('/create_room', { method: 'POST', body: form });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    window.location.href = '/room/' + data.room_code;
+}
+
+// اغلق المودال بالضغط على الخلفية
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', function(e) {
+        if (e.target === this) closeModals();
+    });
+});
+</script>
+{% endblock %}

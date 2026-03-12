@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block title %}قائمة الترتيب - Guess Up{% endblock %}
+
+{% block extra_css %}
+<style>
+    .lb-header { text-align: center; padding: 32px 0 24px; }
+    .lb-header h1 { font-size: 2rem; font-weight: 900; }
+
+    .lb-table { width: 100%; border-collapse: collapse; }
+    .lb-table th {
+        text-align: right;
+        padding: 12px 16px;
+        color: var(--muted);
+        font-size: 0.85rem;
+        font-weight: 600;
+        border-bottom: 1px solid var(--border);
+    }
+    .lb-table td {
+        padding: 14px 16px;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .lb-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .rank-badge {
+        width: 32px; height: 32px;
+        border-radius: 50%;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-weight: 900; font-size: 0.9rem;
+    }
+    .rank-1 { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
+    .rank-2 { background: linear-gradient(135deg, #94a3b8, #64748b); color: white; }
+    .rank-3 { background: linear-gradient(135deg, #cd7c3a, #a5602a); color: white; }
+    .rank-other { background: var(--surface); color: var(--muted); }
+
+    .player-name-cell { font-weight: 700; }
+    .points-cell { color: var(--accent2); font-weight: 700; font-size: 1rem; }
+    .my-row td { background: rgba(124,58,237,0.08) !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="lb-header">
+        <div style="font-size:3rem;margin-bottom:8px">🏆</div>
+        <h1>قائمة الترتيب</h1>
+        <p style="color:var(--muted);margin-top:8px">أقوى اللاعبين نقاطاً</p>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden">
+        <table class="lb-table">
+            <thead>
+                <tr>
+                    <th style="width:60px">#</th>
+                    <th>اللاعب</th>
+                    <th>النقط</th>
+                    <th>تاريخ الانضمام</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in players %}
+                <tr {% if session.player_id == p.id %}class="my-row"{% endif %}>
+                    <td>
+                        <span class="rank-badge {% if loop.index == 1 %}rank-1{% elif loop.index == 2 %}rank-2{% elif loop.index == 3 %}rank-3{% else %}rank-other{% endif %}">
+                            {{ loop.index }}
+                        </span>
+                    </td>
+                    <td class="player-name-cell">
+                        {{ p.player_name }}
+                        {% if session.player_id == p.id %}<span style="color:var(--accent);font-size:0.8rem;margin-right:6px">(أنت)</span>{% endif %}
+                    </td>
+                    <td class="points-cell">💰 {{ p.points }}</td>
+                    <td style="color:var(--muted);font-size:0.85rem">{{ p.created_at.strftime('%Y/%m/%d') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div style="text-align:center;margin-top:20px">
+        <a href="/lobby" class="btn btn-ghost">← العودة للوبي</a>
+    </div>
+</div>
+{% endblock %}
