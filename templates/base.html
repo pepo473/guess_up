@@ -3,373 +3,268 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>{% block title %}Guess Up{% endblock %}</title>
-
     <!-- PWA -->
     <link rel="manifest" href="/static/manifest.json">
-    <meta name="theme-color" content="#4f6ef7">
+    <meta name="theme-color" content="#7c3aed">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Guess Up">
     <link rel="apple-touch-icon" href="/static/icons/icon-152x152.png">
     <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+    <title>{% block title %}Guess Up 🎯{% endblock %}</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-
     <style>
-    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    :root {
-        /* ── Palette: Navy Calm ── */
-        --bg:       #0e1117;
-        --surface:  #161b27;
-        --card:     #1c2333;
-        --card2:    #212840;
-        --border:   #2a3350;
-        --border2:  #344060;
+        :root {
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --card: #1a1a26;
+            --border: #2a2a3a;
+            --accent: #7c3aed;
+            --accent2: #f59e0b;
+            --green: #10b981;
+            --red: #ef4444;
+            --text: #e2e8f0;
+            --muted: #64748b;
+            --glow: 0 0 20px rgba(124,58,237,0.4);
+        }
 
-        /* ── Accents ── */
-        --blue:     #4f6ef7;   /* primary */
-        --blue-dim: #3a55d4;
-        --teal:     #2dd4bf;   /* secondary */
-        --gold:     #f0b429;   /* highlights */
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            background-image:
+                radial-gradient(ellipse at 20% 20%, rgba(124,58,237,0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(245,158,11,0.05) 0%, transparent 50%);
+        }
 
-        /* ── State ── */
-        --green:    #34d399;
-        --red:      #f87171;
-        --yellow:   #fbbf24;
+        nav {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-        /* ── Text ── */
-        --text:     #e2e8f0;
-        --text2:    #94a3b8;
-        --muted:    #64748b;
+        .nav-logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+        }
 
-        /* ── Misc ── */
-        --radius:   10px;
-        --radius-lg:16px;
-        --shadow:   0 2px 12px rgba(0,0,0,.35);
-    }
+        .nav-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 0.9rem;
+        }
 
-    body {
-        font-family: 'Cairo', system-ui, sans-serif;
-        background: var(--bg);
-        color: var(--text);
-        min-height: 100vh;
-        line-height: 1.6;
-        -webkit-font-smoothing: antialiased;
-    }
+        .points-badge {
+            background: linear-gradient(135deg, var(--accent), #5b21b6);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
 
-    /* ──────────────────── NAV ──────────────────── */
-    nav {
-        background: var(--surface);
-        border-bottom: 1px solid var(--border);
-        padding: 10px 18px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        position: sticky;
-        top: 0;
-        z-index: 200;
-    }
-    .nav-logo {
-        font-size: 1.2rem;
-        font-weight: 900;
-        color: var(--text);
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        gap: 7px;
-    }
-    .nav-logo .dot {
-        width: 8px; height: 8px;
-        border-radius: 50%;
-        background: var(--blue);
-        display: inline-block;
-    }
-    .nav-right {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: .85rem;
-    }
-    .pts-chip {
-        background: var(--card2);
-        border: 1px solid var(--border2);
-        border-radius: 20px;
-        padding: 3px 12px;
-        font-weight: 700;
-        font-size: .82rem;
-        color: var(--gold);
-    }
-    .nav-name {
-        color: var(--text2);
-        font-size: .82rem;
-        text-decoration: none;
-        max-width: 110px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-    .nav-name:hover { color: var(--text); }
-    .btn-logout {
-        background: none;
-        border: 1px solid var(--border);
-        color: var(--muted);
-        padding: 3px 10px;
-        border-radius: 7px;
-        font-family: 'Cairo', sans-serif;
-        font-size: .78rem;
-        cursor: pointer;
-        transition: .15s;
-    }
-    .btn-logout:hover { color: var(--red); border-color: var(--red); }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 32px 16px;
+        }
 
-    /* ──────────────────── LAYOUT ──────────────────── */
-    .container {
-        max-width: 820px;
-        margin: 0 auto;
-        padding: 20px 14px;
-    }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            margin-bottom: 20px;
+        }
 
-    /* ──────────────────── CARD ──────────────────── */
-    .card {
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-lg);
-        padding: 20px;
-        margin-bottom: 14px;
-    }
-    .card-title {
-        font-size: 1rem;
-        font-weight: 700;
-        margin-bottom: 14px;
-        color: var(--text2);
-        text-transform: uppercase;
-        letter-spacing: .5px;
-        font-size: .78rem;
-    }
+        .card-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--text);
+        }
 
-    /* ──────────────────── BUTTONS ──────────────────── */
-    .btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        padding: 9px 20px;
-        border-radius: var(--radius);
-        font-family: 'Cairo', sans-serif;
-        font-size: .9rem;
-        font-weight: 700;
-        cursor: pointer;
-        border: none;
-        text-decoration: none;
-        transition: filter .15s, transform .1s;
-        -webkit-tap-highlight-color: transparent;
-        white-space: nowrap;
-    }
-    .btn:active  { transform: scale(.96); }
-    .btn:disabled { opacity: .4; cursor: not-allowed; transform: none !important; }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-family: 'Cairo', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
 
-    .btn-primary { background: var(--blue);  color: #fff; }
-    .btn-primary:hover { filter: brightness(1.1); }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #5b21b6);
+            color: white;
+            box-shadow: var(--glow);
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 30px rgba(124,58,237,0.6); }
 
-    .btn-teal    { background: var(--teal);  color: #0e1117; }
-    .btn-teal:hover { filter: brightness(1.08); }
+        .btn-gold {
+            background: linear-gradient(135deg, var(--accent2), #d97706);
+            color: white;
+        }
+        .btn-gold:hover { transform: translateY(-2px); }
 
-    .btn-green   { background: var(--green); color: #0e1117; }
-    .btn-danger  { background: var(--red);   color: #fff; }
+        .btn-green {
+            background: linear-gradient(135deg, var(--green), #059669);
+            color: white;
+        }
 
-    .btn-ghost {
-        background: var(--card2);
-        color: var(--text2);
-        border: 1px solid var(--border);
-    }
-    .btn-ghost:hover { border-color: var(--border2); color: var(--text); }
+        .btn-danger {
+            background: linear-gradient(135deg, var(--red), #b91c1c);
+            color: white;
+        }
 
-    .btn-sm { padding: 6px 14px; font-size: .82rem; }
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+        .btn-ghost:hover { background: var(--surface); }
 
-    /* ──────────────────── INPUT ──────────────────── */
-    .input {
-        width: 100%;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        padding: 10px 14px;
-        color: var(--text);
-        font-family: 'Cairo', sans-serif;
-        font-size: .95rem;
-        outline: none;
-        transition: border-color .15s;
-    }
-    .input:focus { border-color: var(--blue); }
-    .input::placeholder { color: var(--muted); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
 
-    /* ──────────────────── ALERTS ──────────────────── */
-    .alert {
-        padding: 10px 14px;
-        border-radius: var(--radius);
-        font-size: .88rem;
-        margin-bottom: 10px;
-    }
-    .alert-error  { background: rgba(248,113,113,.08); color: #fca5a5; border:1px solid rgba(248,113,113,.2); }
-    .alert-info   { background: rgba(79,110,247,.1);  color: #a5b4fc; border:1px solid rgba(79,110,247,.2); }
-    .alert-success{ background: rgba(52,211,153,.08); color: #6ee7b7; border:1px solid rgba(52,211,153,.2); }
+        .input {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: var(--text);
+            font-family: 'Cairo', sans-serif;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .input:focus { border-color: var(--accent); }
 
-    /* ──────────────────── MODAL ──────────────────── */
-    .modal-overlay {
-        position: fixed; inset: 0;
-        background: rgba(5,8,16,.8);
-        display: flex; align-items: center; justify-content: center;
-        z-index: 400; padding: 16px;
-    }
-    .modal {
-        background: var(--card);
-        border: 1px solid var(--border2);
-        border-radius: var(--radius-lg);
-        padding: 24px;
-        width: 100%; max-width: 420px;
-        max-height: 92vh; overflow-y: auto;
-        box-shadow: var(--shadow);
-    }
+        .alert {
+            padding: 14px 18px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+        .alert-error { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
+        .alert-success { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #6ee7b7; }
+        .alert-info { background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.3); color: #c4b5fd; }
 
-    /* ──────────────────── UTILS ──────────────────── */
-    .hidden { display: none !important; }
+        /* Modal */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000;
+        }
+        .modal {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 36px;
+            max-width: 480px;
+            width: 90%;
+            text-align: center;
+            animation: popIn 0.3s ease;
+        }
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
 
-    .chip {
-        display: inline-flex; align-items: center; gap: 4px;
-        background: var(--card2);
-        border: 1px solid var(--border);
-        border-radius: 20px;
-        padding: 3px 10px;
-        font-size: .78rem;
-        font-weight: 700;
-    }
+        .hidden { display: none !important; }
 
-    .section-label {
-        font-size: .72rem;
-        font-weight: 700;
-        color: var(--muted);
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 10px;
-    }
-
-    /* ──────────────────── TOAST ──────────────────── */
-    .toast-wrap {
-        position: fixed; bottom: 24px; left: 50%;
-        transform: translateX(-50%);
-        z-index: 9999; pointer-events: none;
-        display: flex; flex-direction: column; align-items: center; gap: 8px;
-    }
-    .toast {
-        background: var(--card2);
-        border: 1px solid var(--border2);
-        border-radius: var(--radius);
-        padding: 10px 20px;
-        font-size: .88rem;
-        color: var(--text);
-        box-shadow: var(--shadow);
-        animation: toastIn .25s ease;
-        white-space: nowrap;
-    }
-    @keyframes toastIn {
-        from { opacity:0; transform:translateY(8px); }
-        to   { opacity:1; transform:translateY(0); }
-    }
-
-    /* ──────────────────── PWA BANNER ──────────────────── */
-    #pwa-banner {
-        position: fixed; bottom:0; left:0; right:0;
-        background: var(--surface);
-        border-top: 1px solid var(--border2);
-        padding: 12px 16px;
-        display: flex; align-items: center; gap: 12px;
-        z-index: 9000;
-        box-shadow: 0 -4px 20px rgba(0,0,0,.3);
-    }
-    #pwa-banner img { width:38px; height:38px; border-radius:9px; flex-shrink:0; }
-    #pwa-banner .pt { flex:1; }
-    #pwa-banner .pt b { display:block; font-size:.88rem; }
-    #pwa-banner .pt s { font-size:.75rem; color:var(--muted); font-style:normal; }
-    #pwa-install-btn {
-        background: var(--blue); color:#fff; border:none;
-        border-radius:8px; padding:7px 14px;
-        font-family:'Cairo',sans-serif; font-size:.82rem;
-        font-weight:700; cursor:pointer; white-space:nowrap;
-    }
-    #pwa-dismiss-btn {
-        background:none; border:none; color:var(--muted);
-        font-size:1.2rem; cursor:pointer; padding:4px 8px;
-    }
-    #ios-banner {
-        position:fixed; bottom:0; left:0; right:0;
-        background:var(--surface); border-top:1px solid var(--border2);
-        padding:14px 16px; z-index:9000; text-align:center;
-    }
-    #ios-banner p   { font-size:.88rem; margin-bottom:4px; }
-    #ios-banner span{ color:var(--gold); font-weight:700; }
-    #ios-banner small{ color:var(--muted); font-size:.75rem; display:block; }
-    #ios-close { position:absolute; top:10px; left:12px; background:none;
-                 border:none; color:var(--muted); font-size:1.1rem; cursor:pointer; }
-
-    {% block extra_css %}{% endblock %}
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px; left: 50%;
+            transform: translateX(-50%);
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 24px;
+            font-weight: 600;
+            z-index: 2000;
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp {
+            from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+            to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
     </style>
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
+    <nav>
+        <a href="/" class="nav-logo">🎯 Guess Up</a>
+        <div class="nav-info">
+            {% if session.player_name %}
+                <span>👤 {{ session.player_name }}</span>
+                <span class="points-badge">
+                    💰 <span id="nav-points">{{ player.points if player else '' }}</span>
+                </span>
+                <a href="/leaderboard" class="btn btn-ghost" style="padding:6px 12px;font-size:0.8rem">🏆 ترتيب</a>
+                <a href="/logout" class="btn btn-ghost" style="padding:6px 12px;font-size:0.8rem;color:var(--red)">خروج 🚪</a>
+            {% endif %}
+        </div>
+    </nav>
 
-{% if session.player_id %}
-<nav>
-    <a href="/lobby" class="nav-logo">
-        <span class="dot"></span>
-        Guess Up
-    </a>
-    <div class="nav-right">
-        {% set me = get_player() %}
-        {% if me %}
-        <span class="pts-chip">💰 {{ me.points }}</span>
-        <a href="/player/{{ session.player_id }}" class="nav-name">{{ session.player_name }}</a>
-        {% endif %}
-        <form action="/logout" method="get" style="display:inline">
-            <button class="btn-logout">خروج</button>
-        </form>
+    {% block content %}{% endblock %}
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    {% block scripts %}{% endblock %}
+
+<!-- PWA Install Banner -->
+<div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;
+    background:rgba(30,27,46,.97);border-top:1px solid rgba(124,58,237,.5);
+    padding:12px 16px;z-index:9000;display:none;align-items:center;gap:12px">
+    <img src="/static/icons/icon-96x96.png" style="width:38px;height:38px;border-radius:9px;flex-shrink:0">
+    <div style="flex:1">
+        <div style="font-weight:700;font-size:.88rem">📲 ثبّت Guess Up</div>
+        <div style="font-size:.75rem;color:#64748b">العب بدون متصفح</div>
     </div>
-</nav>
-{% endif %}
-
-<div class="toast-wrap" id="toastWrap"></div>
-
-{% block content %}{% endblock %}
-
-<!-- PWA -->
-<div id="pwa-banner" style="display:none">
-    <img src="/static/icons/icon-96x96.png" alt="">
-    <div class="pt"><b>📲 ثبّت Guess Up</b><s>العب بدون متصفح</s></div>
-    <button id="pwa-install-btn">تثبيت ⚡</button>
-    <button id="pwa-dismiss-btn">✕</button>
-</div>
-<div id="ios-banner" style="display:none">
-    <button id="ios-close" onclick="closePwa()">✕</button>
-    <p>اضغط <span>⬆️ Share</span> ثم <span>Add to Home Screen</span></p>
-    <small>عشان تثبّت Guess Up زي تطبيق</small>
+    <button id="pwa-install-btn" style="background:#7c3aed;color:#fff;border:none;
+        border-radius:8px;padding:7px 14px;font-family:'Cairo',sans-serif;
+        font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap">تثبيت ⚡</button>
+    <button id="pwa-dismiss-btn" style="background:none;border:none;color:#64748b;
+        font-size:1.2rem;cursor:pointer;padding:4px 8px">✕</button>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<div id="ios-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;
+    background:rgba(30,27,46,.97);border-top:1px solid rgba(124,58,237,.5);
+    padding:14px 16px;z-index:9000;text-align:center">
+    <button onclick="closePwa()" style="position:absolute;top:10px;left:12px;background:none;
+        border:none;color:#64748b;font-size:1.1rem;cursor:pointer">✕</button>
+    <p style="font-size:.88rem;margin-bottom:4px">اضغط
+        <span style="color:#f59e0b;font-weight:700">⬆️ Share</span> ثم
+        <span style="color:#f59e0b;font-weight:700">Add to Home Screen</span>
+    </p>
+    <small style="color:#64748b;font-size:.75rem">عشان تثبّت Guess Up زي تطبيق عادي</small>
+</div>
+
 <script>
-// Toast
-function showToast(msg, dur) {
-    dur = dur || 2800;
-    var w = document.getElementById('toastWrap');
-    var t = document.createElement('div');
-    t.className = 'toast'; t.textContent = msg;
-    w.appendChild(t);
-    setTimeout(function(){ t.remove(); }, dur);
-}
-// SW
-if ('serviceWorker' in navigator)
+if('serviceWorker' in navigator)
     navigator.serviceWorker.register('/static/sw.js').catch(function(){});
-// PWA
 var _p=null;
-function _wasDismissed(){ try{var d=localStorage.getItem('pwa_d');return d&&(Date.now()-d)<604800000;}catch(e){return false;} }
+function _wd(){try{var d=localStorage.getItem('pwa_d');return d&&(Date.now()-d)<604800000;}catch(e){return false;}}
 function closePwa(){
     document.getElementById('pwa-banner').style.display='none';
     document.getElementById('ios-banner').style.display='none';
@@ -377,15 +272,17 @@ function closePwa(){
 }
 window.addEventListener('beforeinstallprompt',function(e){
     e.preventDefault();_p=e;
-    if(!_wasDismissed()) setTimeout(function(){document.getElementById('pwa-banner').style.display='flex';},2500);
+    if(!_wd()) setTimeout(function(){document.getElementById('pwa-banner').style.display='flex';},2500);
 });
-var _ib=document.getElementById('pwa-install-btn');
-if(_ib) _ib.onclick=function(){if(!_p)return;_p.prompt();_p.userChoice.then(function(){document.getElementById('pwa-banner').style.display='none';_p=null;});};
+document.getElementById('pwa-install-btn').onclick=function(){
+    if(!_p)return;_p.prompt();
+    _p.userChoice.then(function(){document.getElementById('pwa-banner').style.display='none';_p=null;});
+};
 document.getElementById('pwa-dismiss-btn').onclick=closePwa;
-if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.navigator.standalone&&!_wasDismissed())
+if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.navigator.standalone&&!_wd())
     setTimeout(function(){document.getElementById('ios-banner').style.display='block';},2500);
 window.addEventListener('appinstalled',function(){document.getElementById('pwa-banner').style.display='none';});
 </script>
-{% block scripts %}{% endblock %}
+
 </body>
 </html>
