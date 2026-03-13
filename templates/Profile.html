@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+{% block title %}{{ target.player_name }} - Guess Up{% endblock %}
+
+{% block extra_css %}
+<style>
+.profile-hero {
+    text-align:center;padding:32px 20px 22px;
+    background:linear-gradient(180deg,rgba(124,58,237,.12) 0%,transparent 100%);
+    border-bottom:1px solid var(--border);
+}
+.avatar-lg { width:86px;height:86px;border-radius:50%;object-fit:cover;border:3px solid var(--accent);margin:0 auto 12px;display:block; }
+.avatar-ph { width:86px;height:86px;border-radius:50%;background:var(--surface);border:3px solid var(--border);
+             display:flex;align-items:center;justify-content:center;font-size:2.4rem;margin:0 auto 12px; }
+.profile-name { font-size:1.5rem;font-weight:900;margin-bottom:3px; }
+.profile-title { color:#c4b5fd;font-size:.85rem;margin-bottom:5px; }
+.profile-pts   { color:var(--accent2);font-weight:700;font-size:1rem; }
+.profile-since { color:var(--muted);font-size:.78rem;margin-top:3px; }
+
+/* Rank display */
+.rank-hero {
+    display:inline-flex;align-items:center;gap:8px;
+    border-radius:12px;padding:7px 16px;font-size:.9rem;font-weight:700;
+    border:1px solid;margin-top:10px;
+}
+
+/* XP Bar */
+.xp-section { margin-top:12px; }
+.xp-label { font-size:.78rem;color:var(--muted);margin-bottom:4px; }
+.xp-bar-wrap { background:var(--surface);border-radius:8px;height:8px;overflow:hidden;max-width:220px;margin:0 auto; }
+.xp-bar-fill { height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .8s; }
+
+/* Stats */
+.stats-row { display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px; }
+.stat-box { background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center; }
+.stat-box .num { font-size:1.7rem;font-weight:900;color:var(--accent); }
+.stat-box .lbl { font-size:.78rem;color:var(--muted);margin-top:3px; }
+
+/* Streak */
+.streak-box { background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:12px;
+              padding:12px;text-align:center;margin-bottom:16px; }
+.streak-box .s-num { font-size:1.5rem;font-weight:900;color:#fca5a5; }
+.streak-box .s-lbl { color:var(--muted);font-size:.8rem; }
+
+/* Achievements */
+.ach-grid { display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px; }
+.ach-badge {
+    background:var(--card);border:1px solid var(--border);
+    border-radius:10px;padding:9px 13px;
+    display:flex;align-items:center;gap:7px;font-size:.85rem;
+}
+.ach-badge .ach-icon { font-size:1.2rem; }
+.ach-badge .ach-name { font-weight:700; }
+.ach-badge .ach-desc { color:var(--muted);font-size:.75rem; }
+
+/* Upload */
+.upload-area {
+    border:2px dashed var(--border);border-radius:12px;padding:18px;
+    text-align:center;cursor:pointer;transition:.2s;margin-bottom:14px;
+}
+.upload-area:hover { border-color:var(--accent); }
+
+/* Matches */
+.match-row { display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border-bottom:1px solid var(--border); }
+.match-row:last-child { border-bottom:none; }
+.match-vs  { font-weight:700;font-size:.9rem; }
+.match-sub { color:var(--muted);font-size:.76rem;margin-top:2px; }
+.badge-win  { background:rgba(16,185,129,.18);color:#6ee7b7;border-radius:7px;padding:3px 9px;font-size:.78rem;font-weight:700; }
+.badge-lose { background:rgba(239,68,68,.14);color:#fca5a5;border-radius:7px;padding:3px 9px;font-size:.78rem;font-weight:700; }
+.badge-bot  { background:rgba(100,116,139,.2);color:#94a3b8;border-radius:7px;padding:3px 9px;font-size:.78rem; }
+
+/* Replay button */
+.replay-btn {
+    background:none;border:none;color:var(--muted);font-size:.72rem;
+    cursor:pointer;text-decoration:underline;font-family:'Cairo',sans-serif;
+    padding:0;margin-top:2px;
+}
+.replay-modal { display:none; }
+.rank-next { color: var(--muted); font-size:.75rem; margin-right:6px; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set r = target.rank %}
+
+<div id="profile-data" data-is-me="{{ '1' if is_me else '0' }}" style="display:none"></div>
+<div class="profile-hero">
+    {% if target.avatar %}
+        <img src="/static/avatars/{{ target.avatar }}" class="avatar-lg" alt="">
+    {% else %}
+        <div class="avatar-ph">👤</div>
+    {% endif %}
+
+    <div class="profile-name">{{ target.player_name }}</div>
+    {% if title %}
+        <div class="profile-title">{{ title }}</div>
+    {% endif %}
+    <div class="profile-pts">💰 {{ target.points }} نقطة</div>
+    <div class="profile-since">عضو منذ {{ target.created_at.strftime('%Y/%m/%d') }}</div>
+
+    <!-- م1: Rank -->
+    <div>
+        <span class="rank-hero" data-rank-color="{{ r.color }}">
+            {{ r.icon }} {{ r.name }}
+            {% if r.next %}<span class="rank-next">← {{ r.next_pts }} للـ{{ r.next }}</span>{% endif %}
+        </span>
+    </div>
+
+    <!-- م12: XP -->
+    <div class="xp-section">
+        <div class="xp-label">Level {{ target.level }} — {{ target.xp_progress }}/100 XP</div>
+        <div class="xp-bar-wrap">
+            <div class="xp-bar-fill" style="width:{{ target.xp_progress }}%"></div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Stats -->
+    <div class="stats-row" style="margin-top:20px">
+        <div class="stat-box">
+            <div class="num">{{ stats.total }}</div>
+            <div class="lbl">مباريات</div>
+        </div>
+        <div class="stat-box">
+            <div class="num" style="color:var(--green)">{{ stats.wins }}</div>
+            <div class="lbl">انتصارات</div>
+        </div>
+        <div class="stat-box">
+            <div class="num">{{ stats.win_rate }}%</div>
+            <div class="lbl">معدل الفوز</div>
+        </div>
+    </div>
+
+    <!-- م4: Streak -->
+    {% if target.win_streak and target.win_streak >= 2 %}
+    <div class="streak-box">
+        <div class="s-num">🔥 {{ target.win_streak }} انتصارات ورا بعض</div>
+        <div class="s-lbl">أحسن streak: {{ target.best_streak }}</div>
+    </div>
+    {% endif %}
+
+    <!-- Achievements -->
+    {% if achievements %}
+    <div style="font-weight:700;font-size:.92rem;margin-bottom:10px">🏅 الإنجازات</div>
+    <div class="ach-grid">
+        {% for a in achievements %}
+        <div class="ach-badge">
+            <span class="ach-icon">{{ a.icon or '🏅' }}</span>
+            <div>
+                <div class="ach-name">{{ a.name }}</div>
+                <div class="ach-desc">{{ a.desc }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- رفع أفاتار -->
+    {% if is_me %}
+    <div class="card">
+        <div class="card-title">🖼️ تغيير الصورة الشخصية</div>
+        <div class="upload-area" onclick="document.getElementById('avatarFile').click()">
+            <div style="font-size:2rem;margin-bottom:6px">📷</div>
+            <div style="font-weight:700">اضغط لاختيار صورة</div>
+            <div style="color:var(--muted);font-size:.78rem;margin-top:3px">PNG / JPG / GIF — أقصى 2MB</div>
+        </div>
+        <input type="file" id="avatarFile" accept="image/*" style="display:none" onchange="uploadAvatar(this)">
+        <div id="avatarMsg" style="display:none"></div>
+    </div>
+    {% endif %}
+
+    <!-- Matches -->
+    <div class="card">
+        <div class="card-title">📋 آخر المباريات</div>
+        {% if matches %}
+        {% for m in matches %}
+        {% set won = m.winner_id == target.id %}
+        <div class="match-row">
+            <div>
+                <div class="match-vs">
+                    {% if m.is_bot %}🤖 ضد الكمبيوتر
+                    {% elif m.player1_id == target.id %}
+                        ضد {% if m.player2 %}{{ m.player2.player_name }}{% else %}لاعب محذوف{% endif %}
+                    {% else %}
+                        ضد {% if m.player1 %}{{ m.player1.player_name }}{% else %}لاعب محذوف{% endif %}
+                    {% endif %}
+                </div>
+                <div class="match-sub">
+                    {{ m.created_at.strftime('%d/%m %H:%M') }}
+                    {% if not m.is_bot %} · {{ m.bet }} نقطة{% endif %}
+                    · {{ m.guesses }} محاولة
+                </div>
+                <!-- م8: Replay -->
+                {% if m.guess_log %}
+                <button class="replay-btn" data-match-id="{{ m.id }}" onclick="showReplay(this.dataset.matchId, this)">▶ عرض التخمينات</button>
+                <div id="replay-{{ m.id }}" class="replay-modal" style="margin-top:6px;font-size:.78rem;color:var(--muted)"></div>
+                {% endif %}
+            </div>
+            <div>
+                {% if m.is_bot %}<span class="badge-bot">بوت 🤖</span>
+                {% elif won %}<span class="badge-win">فوز +{{ m.bet }}</span>
+                {% else %}<span class="badge-lose">خسارة -{{ m.bet }}</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div style="text-align:center;color:var(--muted);padding:24px">لسه ماليعبتش مباريات 🎮</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('[data-rank-color]').forEach(function(el) {
+        var c = el.dataset.rankColor;
+        el.style.color        = c;
+        el.style.borderColor  = c + '44';
+        el.style.background   = c + '18';
+    });
+});
+
+var IS_ME = document.getElementById('profile-data').dataset.isMe === '1';
+
+// م8: Replay
+async function showReplay(matchId, btn) {
+    var container = document.getElementById('replay-' + matchId);
+    if (container.style.display === 'block') {
+        container.style.display = 'none';
+        btn.textContent = '▶ عرض التخمينات';
+        return;
+    }
+    btn.textContent = '⏳ جاري التحميل...';
+    var res  = await fetch('/api/match/' + matchId + '/replay');
+    var data = await res.json();
+    var icons = {higher: '⬆️', lower: '⬇️', correct: '✅'};
+    if (!data.log || !data.log.length) {
+        container.textContent = 'مفيش بيانات';
+    } else {
+        var html = '';
+        for (var i = 0; i < data.log.length; i++) {
+            var e = data.log[i];
+            var icon = icons[e.result] || '';
+            html += '<div style="padding:2px 0">#' + (i+1) + ' <strong>' + e.guesser + '</strong> خمّن <strong>' + e.guess + '</strong> ' + icon + '</div>';
+        }
+        container.innerHTML = html;
+    }
+    container.style.display = 'block';
+    btn.textContent = '▲ إخفاء';
+}
+
+async function uploadAvatar(input) {
+    if (!IS_ME) return;
+    var file = input.files[0];
+    if (!file) return;
+    var msg = document.getElementById('avatarMsg');
+    msg.style.display = 'block';
+    msg.textContent   = '⏳ جاري الرفع...';
+    var form = new FormData();
+    form.append('avatar', file);
+    var res  = await fetch('/upload_avatar', {method: 'POST', body: form});
+    var data = await res.json();
+    if (data.ok) {
+        msg.textContent = '✅ تم تحديث الصورة!';
+        setTimeout(function() { location.reload(); }, 700);
+    } else {
+        msg.textContent = '⚠️ ' + data.error;
+    }
+}
+</script>
+{% endblock %}

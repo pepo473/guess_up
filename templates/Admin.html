@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% block title %}Admin Panel{% endblock %}
+{% block extra_css %}
+<style>
+.admin-wrap { max-width:700px; margin:0 auto; padding:24px 16px; }
+.admin-title { font-size:1.5rem; font-weight:900; margin-bottom:6px; }
+.admin-sub   { color:var(--muted); font-size:.88rem; margin-bottom:24px; }
+
+.players-table { width:100%; border-collapse:collapse; margin-bottom:28px; }
+.players-table th {
+    text-align:right; padding:10px 12px; font-size:.8rem;
+    color:var(--muted); border-bottom:2px solid var(--border);
+}
+.players-table td { padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:middle; }
+.players-table tr:hover td { background:rgba(124,58,237,.05); }
+.pts-cell  { font-weight:900; color:var(--accent2); font-size:1rem; }
+.name-cell { font-weight:700; }
+
+.edit-row { display:flex; gap:6px; align-items:center; }
+.edit-row input {
+    width:80px; padding:5px 8px; font-size:.88rem;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:8px; color:var(--text); font-family:'Cairo',sans-serif;
+    text-align:center;
+}
+.edit-row input:focus { outline:none; border-color:var(--accent); }
+.btn-add { background:rgba(16,185,129,.2); color:#6ee7b7; border:1px solid rgba(16,185,129,.3);
+           border-radius:8px; padding:5px 10px; cursor:pointer; font-size:.82rem;
+           font-family:'Cairo',sans-serif; transition:.15s; }
+.btn-sub { background:rgba(239,68,68,.15); color:#fca5a5; border:1px solid rgba(239,68,68,.25);
+           border-radius:8px; padding:5px 10px; cursor:pointer; font-size:.82rem;
+           font-family:'Cairo',sans-serif; transition:.15s; }
+.btn-set { background:rgba(124,58,237,.2); color:#c4b5fd; border:1px solid rgba(124,58,237,.3);
+           border-radius:8px; padding:5px 10px; cursor:pointer; font-size:.82rem;
+           font-family:'Cairo',sans-serif; transition:.15s; }
+.btn-add:hover { background:rgba(16,185,129,.35); }
+.btn-sub:hover { background:rgba(239,68,68,.3); }
+.btn-set:hover { background:rgba(124,58,237,.35); }
+
+.toast-ok  { position:fixed;top:20px;left:50%;transform:translateX(-50%);
+             background:#10b981;color:#fff;font-weight:700;
+             border-radius:10px;padding:10px 24px;z-index:999;
+             animation:fadeIn .3s ease; display:none; }
+@keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(-8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+.rank-dot { width:10px; height:10px; border-radius:50%; display:inline-block; margin-left:5px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="toast-ok" id="toast"></div>
+
+<div class="admin-wrap">
+    <div class="admin-title">⚡ Admin Panel</div>
+    <div class="admin-sub">عدّل نقاط اللاعبين مباشرة — الباسورد: <code>{{ secret_hint }}</code></div>
+
+    <table class="players-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>اللاعب</th>
+                <th>الرتبة</th>
+                <th>النقاط</th>
+                <th>التعديل</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for p in players %}
+        {% set r = p.rank %}
+        <tr id="row-{{ p.id }}">
+            <td style="color:var(--muted)">{{ loop.index }}</td>
+            <td class="name-cell">{{ p.player_name }}</td>
+            <td>
+                <span class="rank-dot" style="background:{{ r.color }}"></span>
+                <span style="font-size:.82rem;color:{{ r.color }}">{{ r.icon }} {{ r.name }}</span>
+            </td>
+            <td class="pts-cell" id="pts-{{ p.id }}">{{ p.points }}</td>
+            <td>
+                <div class="edit-row">
+                    <input type="number" id="inp-{{ p.id }}" value="100" min="1" max="99999">
+                    <button class="btn-add" onclick="editPts({{ p.id }}, 'add')">+ إضافة</button>
+                    <button class="btn-sub" onclick="editPts({{ p.id }}, 'sub')">- طرح</button>
+                    <button class="btn-set" onclick="editPts({{ p.id }}, 'set')">= تحديد</button>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="/lobby" class="btn btn-ghost">← رجوع للعبة</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function editPts(pid, action) {
+    const amount = parseInt(document.getElementById('inp-' + pid).value);
+    if (!amount || amount < 1) { alert('اكتب رقم صح!'); return; }
+
+    const form = new FormData();
+    form.append('player_id', pid);
+    form.append('action', action);
+    form.append('amount', amount);
+
+    const res  = await fetch('/admin/edit_points', { method: 'POST', body: form });
+    const data = await res.json();
+
+    if (data.ok) {
+        document.getElementById('pts-' + pid).textContent = data.new_points;
+        showToast(data.msg);
+    } else {
+        alert('❌ ' + data.error);
+    }
+}
+
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, 2500);
+}
+</script>
+{% endblock %}

@@ -3,294 +3,408 @@
 
 {% block extra_css %}
 <style>
-    .lobby-header {
-        text-align: center;
-        padding: 32px 0 24px;
-    }
-    .lobby-header h1 { font-size: 1.8rem; font-weight: 900; }
-    .points-display {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        background: linear-gradient(135deg, rgba(124,58,237,0.2), rgba(245,158,11,0.15));
-        border: 1px solid rgba(124,58,237,0.4);
-        border-radius: 20px;
-        padding: 12px 28px;
-        font-size: 1.5rem;
-        font-weight: 900;
-        margin-top: 12px;
-    }
+/* ── Header ── */
+.lobby-header { text-align:center; padding:24px 0 16px; }
+.player-hero {
+    display:inline-flex; align-items:center; gap:14px;
+    background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(245,158,11,.1));
+    border:1px solid rgba(124,58,237,.3); border-radius:20px;
+    padding:14px 24px; margin-top:10px;
+}
+.avatar-sm { width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid var(--accent); }
+.avatar-ph { width:44px;height:44px;border-radius:50%;background:var(--surface);border:2px solid var(--border);
+             display:inline-flex;align-items:center;justify-content:center;font-size:1.3rem; }
+.player-info .name  { font-size:1.1rem;font-weight:900; }
+.player-info .pts   { color:var(--accent2);font-weight:700;font-size:.95rem; }
+.player-info .title { color:#c4b5fd;font-size:.78rem;margin-top:1px; }
 
-    .grid-2 {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-    }
-    @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
+/* ── Rank Badge ── */
+.rank-badge {
+    display:inline-flex;align-items:center;gap:6px;
+    border-radius:10px;padding:5px 12px;font-size:.85rem;font-weight:700;
+    border:1px solid rgba(255,255,255,.15);
+}
 
-    .action-card {
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        padding: 24px;
-        cursor: pointer;
-        transition: all 0.2s;
-        text-align: center;
-    }
-    .action-card:hover {
-        border-color: var(--accent);
-        transform: translateY(-3px);
-        box-shadow: 0 8px 30px rgba(124,58,237,0.2);
-    }
-    .action-card .icon { font-size: 2.5rem; margin-bottom: 12px; }
-    .action-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
-    .action-card p { color: var(--muted); font-size: 0.85rem; }
+/* ── XP Bar ── */
+.xp-bar-wrap {
+    background:var(--surface);border-radius:6px;height:6px;
+    overflow:hidden;margin-top:6px;width:120px;
+}
+.xp-bar-fill { height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));
+               border-radius:6px;transition:width .6s; }
 
-    .bankrupt-section {
-        background: linear-gradient(135deg, rgba(239,68,68,0.1), rgba(239,68,68,0.05));
-        border: 1px solid rgba(239,68,68,0.3);
-        border-radius: 16px;
-        padding: 24px;
-        text-align: center;
-    }
-    .bankrupt-section h3 { color: #fca5a5; margin-bottom: 8px; font-size: 1.2rem; }
-    .bankrupt-section p { color: var(--muted); font-size: 0.9rem; margin-bottom: 16px; }
+/* ── Quick actions ── */
+.quick-actions { display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px; }
 
-    /* Modal forms */
-    .modal-form .form-group { margin-bottom: 16px; text-align: right; }
-    .modal-form label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.9rem; color: var(--muted); }
-    .modal-form h2 { margin-bottom: 20px; font-size: 1.3rem; }
+/* ── Daily Reward ── */
+.daily-btn {
+    background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(245,158,11,.08));
+    border:1px solid rgba(245,158,11,.4);border-radius:12px;
+    padding:12px 20px;text-align:center;cursor:pointer;
+    transition:all .2s;width:100%;margin-bottom:14px;
+}
+.daily-btn:hover { transform:translateY(-2px);box-shadow:0 6px 20px rgba(245,158,11,.2); }
+.daily-btn .daily-title { font-weight:700;font-size:1rem;margin-bottom:2px; }
+.daily-btn .daily-sub   { color:var(--muted);font-size:.82rem; }
+.daily-btn.claimed      { opacity:.5;cursor:not-allowed;transform:none!important; }
 
-    .bet-options {
-        display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0;
-    }
-    .bet-chip {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 6px 14px;
-        cursor: pointer;
-        font-family: 'Cairo', sans-serif;
-        font-size: 0.9rem;
-        color: var(--text);
-        transition: all 0.15s;
-    }
-    .bet-chip:hover, .bet-chip.active {
-        background: var(--accent);
-        border-color: var(--accent);
-        color: white;
-    }
+/* ── Grid ── */
+.grid-2 { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+@media(max-width:600px){.grid-2{grid-template-columns:1fr}}
+.action-card {
+    background:var(--card);border:1px solid var(--border);
+    border-radius:16px;padding:20px;cursor:pointer;
+    transition:all .2s;text-align:center;text-decoration:none;color:var(--text);
+    display:block;
+}
+.action-card:hover { border-color:var(--accent);transform:translateY(-3px);
+    box-shadow:0 8px 28px rgba(124,58,237,.2); }
+.action-card .icon { font-size:2.1rem;margin-bottom:8px; }
+.action-card h3    { font-size:.98rem;font-weight:700;margin-bottom:3px; }
+.action-card p     { color:var(--muted);font-size:.8rem; }
 
-    .section-title {
-        font-size: 1rem;
-        font-weight: 700;
-        color: var(--muted);
-        margin-bottom: 14px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
+/* ── Streak bar ── */
+.streak-display {
+    display:inline-flex;align-items:center;gap:8px;
+    background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);
+    border-radius:10px;padding:5px 14px;font-size:.88rem;font-weight:700;
+    color:#fca5a5;
+}
+
+/* ── Public rooms ── */
+.section-title { font-size:.82rem;font-weight:700;color:var(--muted);
+    margin-bottom:10px;text-transform:uppercase;letter-spacing:1px; }
+.public-room-item {
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--card);border:1px solid var(--border);
+    border-radius:12px;padding:12px 14px;margin-bottom:8px;transition:.2s;
+}
+.public-room-item:hover { border-color:var(--accent); }
+.pr-host { font-weight:700;font-size:.9rem; }
+.pr-sub  { color:var(--muted);font-size:.78rem;margin-top:2px; }
+
+/* modal */
+.modal-form .form-group { margin-bottom:12px;text-align:right; }
+.modal-form label { display:block;margin-bottom:4px;font-size:.85rem;font-weight:600;color:var(--muted); }
+.modal-form h2 { margin-bottom:16px;font-size:1.2rem; }
+.bet-options { display:flex;gap:6px;flex-wrap:wrap;margin:4px 0; }
+.bet-chip {
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:8px;padding:5px 11px;cursor:pointer;
+    font-family:'Cairo',sans-serif;font-size:.85rem;color:var(--text);transition:.15s;
+}
+.bet-chip:hover,.bet-chip.active { background:var(--accent);border-color:var(--accent);color:#fff; }
+.toggle-row { display:flex;align-items:center;gap:8px;margin-top:8px; }
+.toggle-row label { font-size:.85rem;color:var(--muted);cursor:pointer; }
+input[type=checkbox] { accent-color:var(--accent);width:15px;height:15px; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container">
     <div class="lobby-header">
-        <h1>🎮 اللوبي</h1>
-        <div class="points-display">
-            💰 {{ player.points }} نقطة
+        <h1 style="font-size:1.6rem;font-weight:900;margin-bottom:12px">🎮 Guess Up</h1>
+
+        <!-- Player Hero -->
+        <div class="player-hero">
+            {% if player.avatar %}
+                <img src="/static/avatars/{{ player.avatar }}" class="avatar-sm" alt="">
+            {% else %}
+                <span class="avatar-ph">👤</span>
+            {% endif %}
+            <div class="player-info">
+                <div class="name">{{ player.player_name }}</div>
+                {% if title %}
+                    <div class="title">{{ title }}</div>
+                {% endif %}
+                <div class="pts">💰 {{ player.points }} نقطة</div>
+                <!-- Rank -->
+                {% set r = player.rank %}
+                <span class="rank-badge" data-rank-color="{{ r.color }}" style="margin-top:4px">
+                    {{ r.icon }} {{ r.name }}
+                </span>
+            </div>
+            <!-- XP -->
+            <div style="text-align:center;min-width:70px">
+                <div style="font-size:.75rem;color:var(--muted)">Lv.{{ player.level }}</div>
+                <div class="xp-bar-wrap" style="margin:4px auto">
+                    <div class="xp-bar-fill" data-xp="{{ player.xp_progress }}"></div>
+                </div>
+                <div style="font-size:.72rem;color:var(--muted)">{{ player.xp_progress }}/100 XP</div>
+            </div>
+        </div>
+
+        <!-- Streak -->
+        {% if player.win_streak and player.win_streak >= 2 %}
+        <div style="margin-top:10px">
+            <span class="streak-display">
+                {% if player.win_streak >= 5 %}🔥🔥{% else %}🔥{% endif %}
+                Win Streak: {{ player.win_streak }}
+                {% if player.win_streak >= 3 %} (+{{ player.streak_bonus }} bonus){% endif %}
+            </span>
+        </div>
+        {% endif %}
+
+        <!-- Quick Nav -->
+        <div class="quick-actions">
+            <a href="/player/{{ player.id }}" class="btn btn-ghost" style="font-size:.82rem;padding:5px 12px">👤 ملفي</a>
+            <a href="/leaderboard"            class="btn btn-ghost" style="font-size:.82rem;padding:5px 12px">🏆 الترتيب</a>
         </div>
     </div>
 
+    <!-- م2: Daily Reward -->
+    {% if daily_ready %}
+    <button class="daily-btn" onclick="claimDaily(this)">
+        <div class="daily-title">🎁 مكافأة اليوم جاهزة!</div>
+        <div class="daily-sub">اضغط عشان تاخد +25 نقطة مجاناً</div>
+    </button>
+    {% else %}
+    <div class="daily-btn claimed">
+        <div class="daily-title" style="color:var(--muted)">🎁 تم استلام مكافأة اليوم</div>
+        <div class="daily-sub">ارجع بكره عشان تاخد مكافأة جديدة</div>
+    </div>
+    {% endif %}
+
+    <!-- Game Options -->
     {% if bankrupt %}
-    <!-- وضع المفلسين -->
-    <div class="bankrupt-section">
-        <h3>😅 وضع المفلسين</h3>
-        <p>نقاطك وصلت صفر! مفيش مشكلة — النظام بيديك فرصة تعدي</p>
-        <button onclick="openBankruptModal()" class="btn btn-danger">
-            🔥 العب وضع 50 نقطة
-        </button>
+    <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:14px;padding:20px;text-align:center;margin-bottom:14px">
+        <h3 style="color:#fca5a5;margin-bottom:6px">😅 وضع المفلسين</h3>
+        <p style="color:var(--muted);font-size:.88rem;margin-bottom:14px">نقاطك وصلت صفر — العب بـ 50 نقطة من النظام!</p>
+        <button onclick="openBankruptModal()" class="btn btn-danger">🔥 العب وضع المفلسين</button>
     </div>
     {% else %}
-    <!-- خيارات اللعب العادية -->
     <div class="section-title">اختار نوع اللعبة</div>
     <div class="grid-2">
         <div class="action-card" onclick="openCreateModal()">
             <div class="icon">🏠</div>
             <h3>إنشاء غرفة</h3>
-            <p>افتح غرفة وانتظر صاحبك</p>
+            <p>افتح غرفة وانتظر خصمك</p>
         </div>
         <div class="action-card" onclick="openJoinModal()">
             <div class="icon">🚪</div>
-            <h3>الدخول لغرفة</h3>
-            <p>ادخل كود الغرفة والعب</p>
+            <h3>دخول غرفة</h3>
+            <p>ادخل الكود والعب</p>
         </div>
         <div class="action-card" onclick="startBotGame()">
             <div class="icon">🤖</div>
-            <h3>العب ضد الكمبيوتر</h3>
-            <p>خمن الرقم السري للكمبيوتر</p>
+            <h3>ضد الكمبيوتر</h3>
+            <p>خمن الرقم السري للبوت</p>
         </div>
-        <a href="/leaderboard" class="action-card" style="text-decoration:none">
+        <a href="/leaderboard" class="action-card">
             <div class="icon">🏆</div>
-            <h3>قائمة الترتيب</h3>
+            <h3>الترتيب</h3>
             <p>شوف أقوى اللاعبين</p>
         </a>
     </div>
     {% endif %}
+
+    <!-- م3: Public Rooms -->
+    {% if public_rooms %}
+    <div style="margin-top:20px">
+        <div class="section-title">🌐 غرف عامة متاحة</div>
+        {% for r in public_rooms %}
+        <div class="public-room-item">
+            <div>
+                <div class="pr-host">
+                    {% set h = r.player1 %}
+                    {% if h and h.avatar %}
+                        <img src="/static/avatars/{{ h.avatar }}" style="width:20px;height:20px;border-radius:50%;vertical-align:middle;margin-left:4px" alt="">
+                    {% endif %}
+                    {{ h.player_name if h else '؟' }}
+                    {% if h %}
+                        <span class="rank-icon-sm" data-rank-color="{{ h.rank.color }}" style="font-size:.75rem;margin-right:4px">{{ h.rank.icon }}</span>
+                    {% endif %}
+                </div>
+                <div class="pr-sub">💰 {{ r.bet_points }} نقطة رهان</div>
+            </div>
+            <button onclick="quickJoin('{{ r.room_code }}')" class="btn btn-primary" style="padding:6px 14px;font-size:.85rem">دخول ⚡</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 </div>
 
-<!-- Modal إنشاء غرفة -->
+<!-- Modals -->
 <div id="createModal" class="modal-overlay hidden">
     <div class="modal modal-form">
-        <h2>🏠 إنشاء غرفة جديدة</h2>
+        <h2>🏠 إنشاء غرفة</h2>
         <div class="form-group">
-            <label>الرهان (نقط)</label>
+            <label>الرهان</label>
             <div class="bet-options">
-                <button class="bet-chip active" onclick="setBet(100, this)">100</button>
-                <button class="bet-chip" onclick="setBet(200, this)">200</button>
-                <button class="bet-chip" onclick="setBet(500, this)">500</button>
-                <button class="bet-chip" onclick="setBet(1000, this)">1000</button>
+                <button class="bet-chip active" onclick="setBet(100,this)">100</button>
+                <button class="bet-chip" onclick="setBet(200,this)">200</button>
+                <button class="bet-chip" onclick="setBet(500,this)">500</button>
+                <button class="bet-chip" onclick="setBet(1000,this)">1000</button>
             </div>
-            <input type="number" id="betInput" class="input" value="100" min="100" placeholder="أو اكتب عدد النقط">
+            <input type="number" id="betInput" class="input" value="100" min="100">
         </div>
-        <div id="createError" class="alert alert-error hidden"></div>
-        <div style="display:flex;gap:10px;margin-top:20px">
-            <button onclick="createRoom()" class="btn btn-primary" style="flex:1">إنشاء الغرفة</button>
+        <div class="toggle-row">
+            <input type="checkbox" id="isPublic">
+            <label for="isPublic">🌐 غرفة عامة</label>
+        </div>
+        <div id="createError" class="alert alert-error hidden" style="margin-top:8px"></div>
+        <div style="display:flex;gap:8px;margin-top:14px">
+            <button onclick="createRoom()" class="btn btn-primary" style="flex:1">إنشاء</button>
             <button onclick="closeModals()" class="btn btn-ghost">إلغاء</button>
         </div>
     </div>
 </div>
 
-<!-- Modal الدخول لغرفة -->
 <div id="joinModal" class="modal-overlay hidden">
     <div class="modal modal-form">
-        <h2>🚪 الدخول لغرفة</h2>
+        <h2>🚪 دخول غرفة</h2>
         <div class="form-group">
             <label>كود الغرفة</label>
-            <input type="text" id="roomCodeInput" class="input" placeholder="مثال: ABC123" maxlength="6" style="text-align:center;font-size:1.3rem;letter-spacing:4px">
+            <input type="text" id="roomCodeInput" class="input" placeholder="ABC123"
+                   maxlength="6" style="text-align:center;font-size:1.3rem;letter-spacing:4px">
         </div>
         <div id="joinError" class="alert alert-error hidden"></div>
-        <div style="display:flex;gap:10px;margin-top:20px">
+        <div style="display:flex;gap:8px;margin-top:14px">
             <button onclick="joinRoom()" class="btn btn-green" style="flex:1">دخول</button>
             <button onclick="closeModals()" class="btn btn-ghost">إلغاء</button>
         </div>
     </div>
 </div>
 
-<!-- Modal وضع المفلسين -->
 <div id="bankruptModal" class="modal-overlay hidden">
     <div class="modal modal-form">
         <h2>🔥 وضع المفلسين</h2>
-        <div class="alert alert-info">
-            كل مباراة = 50 نقطة من النظام<br>
-            النقط دي مش بتتخصم منك — الفايز بياخدها بشكل كامل!
-        </div>
+        <div class="alert alert-info" style="margin-bottom:12px">50 نقطة من النظام — الفايز بياخدها كلها!</div>
         <div class="form-group">
-            <label>كود الغرفة (لو عايز تنضم لصاحبك)</label>
-            <input type="text" id="bankruptCode" class="input" placeholder="اتركه فاضي لو عايز تفتح غرفة جديدة">
+            <label>كود الغرفة (اختياري)</label>
+            <input type="text" id="bankruptCode" class="input" placeholder="اتركه فاضي لغرفة جديدة">
         </div>
         <div id="bankruptError" class="alert alert-error hidden"></div>
-        <div style="display:flex;gap:10px;margin-top:20px">
+        <div style="display:flex;gap:8px;margin-top:14px">
             <button onclick="playBankrupt()" class="btn btn-danger" style="flex:1">العب!</button>
             <button onclick="closeModals()" class="btn btn-ghost">إلغاء</button>
         </div>
     </div>
 </div>
+
+<!-- Toast للـ Daily -->
+<div id="dailyToast" class="hidden" style="
+    position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
+    background:rgba(245,158,11,.95);color:#000;font-weight:900;
+    border-radius:14px;padding:14px 28px;font-size:1rem;z-index:999;
+    box-shadow:0 8px 30px rgba(0,0,0,.4);animation:fadeIn .3s ease">
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-function setBet(amount, el) {
-    document.getElementById('betInput').value = amount;
-    document.querySelectorAll('.bet-chip').forEach(c => c.classList.remove('active'));
+function setBet(v,el){
+    document.getElementById('betInput').value=v;
+    document.querySelectorAll('.bet-chip').forEach(c=>c.classList.remove('active'));
     el.classList.add('active');
 }
-
-function openCreateModal() { document.getElementById('createModal').classList.remove('hidden'); }
-function openJoinModal() { document.getElementById('joinModal').classList.remove('hidden'); }
-function openBankruptModal() { document.getElementById('bankruptModal').classList.remove('hidden'); }
-function closeModals() {
-    ['createModal','joinModal','bankruptModal'].forEach(id =>
-        document.getElementById(id).classList.add('hidden')
-    );
+const openCreateModal  = ()=>document.getElementById('createModal').classList.remove('hidden');
+const openJoinModal    = ()=>document.getElementById('joinModal').classList.remove('hidden');
+const openBankruptModal= ()=>document.getElementById('bankruptModal').classList.remove('hidden');
+function closeModals(){
+    ['createModal','joinModal','bankruptModal'].forEach(id=>
+        document.getElementById(id).classList.add('hidden'));
 }
+document.querySelectorAll('.modal-overlay').forEach(o=>
+    o.addEventListener('click',e=>{if(e.target===o)closeModals();}));
 
-async function createRoom() {
-    const bet = document.getElementById('betInput').value;
-    const errEl = document.getElementById('createError');
-
-    const form = new FormData();
-    form.append('bet_points', bet);
-
-    const res = await fetch('/create_room', { method: 'POST', body: form });
+async function claimDaily(btn) {
+    btn.classList.add('claimed');
+    btn.style.pointerEvents = 'none';
+    const res  = await fetch('/daily_reward',{method:'POST'});
     const data = await res.json();
-
-    if (data.error) {
-        errEl.textContent = data.error;
-        errEl.classList.remove('hidden');
-        return;
-    }
-    window.location.href = '/room/' + data.room_code;
-}
-
-async function joinRoom() {
-    const code = document.getElementById('roomCodeInput').value.trim().toUpperCase();
-    const errEl = document.getElementById('joinError');
-
-    if (!code) { errEl.textContent = 'اكتب كود الغرفة'; errEl.classList.remove('hidden'); return; }
-
-    const form = new FormData();
-    form.append('room_code', code);
-
-    const res = await fetch('/join_room_route', { method: 'POST', body: form });
-    const data = await res.json();
-
-    if (data.error) {
-        errEl.textContent = data.error;
-        errEl.classList.remove('hidden');
-        return;
-    }
-    window.location.href = '/room/' + data.room_code;
-}
-
-async function playBankrupt() {
-    const code = document.getElementById('bankruptCode').value.trim().toUpperCase();
-    const errEl = document.getElementById('bankruptError');
-
-    if (code) {
-        // انضم لغرفة موجودة
-        const form = new FormData();
-        form.append('room_code', code);
-        const res = await fetch('/join_room_route', { method: 'POST', body: form });
-        const data = await res.json();
-        if (data.error) { errEl.textContent = data.error; errEl.classList.remove('hidden'); return; }
-        window.location.href = '/room/' + data.room_code;
+    if(data.ok){
+        const t = document.getElementById('dailyToast');
+        t.textContent = `🎁 +${data.points} نقطة! تعالى بكره تاني`;
+        t.classList.remove('hidden');
+        setTimeout(()=>t.classList.add('hidden'), 3000);
     } else {
-        // افتح غرفة جديدة وضع مفلسين
-        const form = new FormData();
-        form.append('bet_points', 50);
-        form.append('bankrupt_mode', '1');
-        const res = await fetch('/create_room', { method: 'POST', body: form });
-        const data = await res.json();
-        if (data.error) { errEl.textContent = data.error; errEl.classList.remove('hidden'); return; }
-        window.location.href = '/room/' + data.room_code;
+        btn.classList.remove('claimed');
+        btn.style.pointerEvents = '';
+        alert('⚠️ ' + data.error);
     }
 }
 
-async function startBotGame() {
-    const form = new FormData();
-    form.append('bet_points', 0);
-    form.append('bot_game', '1');
-    const res = await fetch('/create_room', { method: 'POST', body: form });
-    const data = await res.json();
-    if (data.error) { alert(data.error); return; }
-    window.location.href = '/room/' + data.room_code;
+async function createRoom(){
+    const bet=document.getElementById('betInput').value;
+    const pub=document.getElementById('isPublic').checked?'1':'0';
+    const err=document.getElementById('createError');
+    const form=new FormData(); form.append('bet_points',bet); form.append('is_public',pub);
+    const res=await fetch('/create_room',{method:'POST',body:form});
+    const d=await res.json();
+    if(d.error){err.textContent=d.error;err.classList.remove('hidden');return;}
+    // م6: لو في event ابعت toast قبل ما تنتقل
+    if(d.event && d.event_info && d.event_info.name) {
+        sessionStorage.setItem('pendingEvent', JSON.stringify(d.event_info));
+    }
+    window.location.href='/room/'+d.room_code;
 }
 
-// اغلق المودال بالضغط على الخلفية
-document.querySelectorAll('.modal-overlay').forEach(overlay => {
-    overlay.addEventListener('click', function(e) {
-        if (e.target === this) closeModals();
+async function joinRoom(){
+    const code=document.getElementById('roomCodeInput').value.trim().toUpperCase();
+    const err=document.getElementById('joinError');
+    if(!code){err.textContent='اكتب كود الغرفة';err.classList.remove('hidden');return;}
+    const form=new FormData(); form.append('room_code',code);
+    const res=await fetch('/join_room_route',{method:'POST',body:form});
+    const d=await res.json();
+    if(d.error){err.textContent=d.error;err.classList.remove('hidden');return;}
+    // لو الغرفة ممتلئة → ادخل كـ spectator
+    if(d.spectator){
+        const ok = confirm('👁 الغرفة ممتلئة — تدخل تتفرج على المباراة؟');
+        if(!ok) return;
+    }
+    window.location.href='/room/'+d.room_code;
+}
+
+async function quickJoin(code){
+    const form=new FormData(); form.append('room_code',code);
+    const res=await fetch('/join_room_route',{method:'POST',body:form});
+    const d=await res.json();
+    if(d.error){alert('⚠️ '+d.error);return;}
+    window.location.href='/room/'+d.room_code;
+}
+
+async function playBankrupt(){
+    const code=document.getElementById('bankruptCode').value.trim().toUpperCase();
+    const err=document.getElementById('bankruptError');
+    if(code){
+        const form=new FormData(); form.append('room_code',code);
+        const res=await fetch('/join_room_route',{method:'POST',body:form});
+        const d=await res.json();
+        if(d.error){err.textContent=d.error;err.classList.remove('hidden');return;}
+        window.location.href='/room/'+d.room_code;
+    } else {
+        const form=new FormData(); form.append('bet_points',50); form.append('bankrupt_mode','1');
+        const res=await fetch('/create_room',{method:'POST',body:form});
+        const d=await res.json();
+        if(d.error){err.textContent=d.error;err.classList.remove('hidden');return;}
+        window.location.href='/room/'+d.room_code;
+    }
+}
+
+// Apply rank colors
+document.addEventListener('DOMContentLoaded', function() {
+    var xpBar = document.querySelector('[data-xp]');
+    if (xpBar) { xpBar.style.width = xpBar.dataset.xp + '%'; }
+
+    document.querySelectorAll('[data-rank-color]').forEach(function(el) {
+        var c = el.dataset.rankColor;
+        if(el.classList.contains('rank-badge')){
+            el.style.background   = c + '22';
+            el.style.borderColor  = c + '55';
+            el.style.color        = c;
+        } else {
+            el.style.color = c;
+        }
     });
 });
+
+async function startBotGame(){
+    const form=new FormData(); form.append('bet_points',0); form.append('bot_game','1');
+    const res=await fetch('/create_room',{method:'POST',body:form});
+    const d=await res.json();
+    if(d.error){alert(d.error);return;}
+    window.location.href='/room/'+d.room_code;
+}
 </script>
 {% endblock %}

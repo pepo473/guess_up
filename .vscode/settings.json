@@ -1,0 +1,23 @@
+{
+    "css.validate": false,
+    "less.validate": false,
+    "scss.validate": false,
+    "html.validate.styles": false,
+    "html.validate.scripts": false,
+    "css.lint.emptyRules": "ignore",
+    "css.lint.unknownAtRules": "ignore",
+    "[html]": {
+        "editor.defaultFormatter": "vscode.html-language-features"
+    },
+    "emmet.includeLanguages": {
+        "jinja-html": "html"
+    },
+    "javascript.validate.enable": false,
+    "typescript.validate.enable": false,
+    "files.exclude": {
+        "**/Settings.JS": true
+    },
+    "search.exclude": {
+        "**/Settings.JS": true
+    }
+}
