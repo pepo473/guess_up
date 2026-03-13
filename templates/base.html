@@ -2,8 +2,21 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% block title %}Guess Up 🎯{% endblock %}</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#7c3aed">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Guess Up">
+
+    <!-- Apple Icons -->
+    <link rel="apple-touch-icon" href="/static/icons/icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="/static/icons/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -200,13 +213,97 @@
             from { transform: translateX(-50%) translateY(20px); opacity: 0; }
             to { transform: translateX(-50%) translateY(0); opacity: 1; }
         }
+
+        /* ── PWA Install Banner ── */
+        #pwa-banner {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: linear-gradient(135deg, #1e1b2e, #2d1b4e);
+            border-top: 1px solid rgba(124,58,237,.5);
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            z-index: 9000;
+            backdrop-filter: blur(10px);
+            animation: slideUp .4s cubic-bezier(.175,.885,.32,1.275);
+            box-shadow: 0 -4px 30px rgba(124,58,237,.2);
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
+        }
+        #pwa-banner .pwa-icon {
+            width: 48px; height: 48px;
+            border-radius: 12px;
+            flex-shrink: 0;
+        }
+        #pwa-banner .pwa-text { flex: 1; }
+        #pwa-banner .pwa-text strong {
+            display: block;
+            font-size: .95rem;
+            font-weight: 900;
+            margin-bottom: 2px;
+        }
+        #pwa-banner .pwa-text span {
+            font-size: .78rem;
+            color: var(--muted);
+        }
+        #pwa-banner .pwa-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        #pwa-install-btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 8px 16px;
+            font-family: 'Cairo', sans-serif;
+            font-size: .88rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: .15s;
+            white-space: nowrap;
+        }
+        #pwa-install-btn:hover { background: #6d28d9; transform: scale(1.03); }
+        #pwa-dismiss-btn {
+            background: transparent;
+            color: var(--muted);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-family: 'Cairo', sans-serif;
+            font-size: .82rem;
+            cursor: pointer;
+        }
+        #pwa-dismiss-btn:hover { color: var(--text); }
+
+        /* iOS manual banner */
+        #ios-banner {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: linear-gradient(135deg, #1e1b2e, #2d1b4e);
+            border-top: 1px solid rgba(124,58,237,.5);
+            padding: 16px 20px;
+            z-index: 9000;
+            animation: slideUp .4s ease;
+            text-align: center;
+        }
+        #ios-banner p   { font-size: .88rem; margin-bottom: 6px; }
+        #ios-banner span { color: var(--accent2); font-weight: 700; }
+        #ios-banner small { color: var(--muted); font-size: .78rem; display: block; margin-top: 4px; }
+        #ios-close {
+            position: absolute; top: 10px; left: 14px;
+            background: none; border: none; color: var(--muted);
+            font-size: 1.2rem; cursor: pointer;
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
-    <body>
-        <div style="text-align: center; font-weight: 300; color: #a0a0a0; font-size: 13px; padding-top: 8px;">
-            المبرمج عبد الرحمن حمزه
-        </div>
+<body>
     <nav>
         <a href="/" class="nav-logo">🎯 Guess Up</a>
         <div class="nav-info">
@@ -225,5 +322,119 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     {% block scripts %}{% endblock %}
+
+<!-- ═══════════ PWA Install ═══════════ -->
+<div id="pwa-banner" style="display:none">
+    <img src="/static/icons/icon-96x96.png" class="pwa-icon" alt="Guess Up">
+    <div class="pwa-text">
+        <strong>📲 ثبّت Guess Up!</strong>
+        <span>العب بدون متصفح — زي تطبيق عادي</span>
+    </div>
+    <div class="pwa-actions">
+        <button id="pwa-install-btn">تثبيت ⚡</button>
+        <button id="pwa-dismiss-btn">لأ</button>
+    </div>
+</div>
+
+<div id="ios-banner" style="display:none">
+    <button id="ios-close" onclick="closePwaBanner()">✕</button>
+    <p>📲 ثبّت <span>Guess Up</span> على جهازك!</p>
+    <p>اضغط <span>⬆️ Share</span> ثم <span>Add to Home Screen</span></p>
+    <small>بعدين هتلاقيه زي أي تطبيق تاني على شاشتك</small>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  PWA Install Logic
+// ═══════════════════════════════════════════════════════
+
+// تسجيل الـ Service Worker
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/static/sw.js')
+            .then(reg => console.log('[SW] Registered:', reg.scope))
+            .catch(err => console.warn('[SW] Failed:', err));
+    });
+}
+
+var deferredPrompt = null;
+var PWA_DISMISSED_KEY = 'pwa_dismissed';
+
+// اتأكد مش اتعمل dismiss قبل كده
+function wasDismissed() {
+    try {
+        var d = localStorage.getItem(PWA_DISMISSED_KEY);
+        if (!d) return false;
+        // لو عدا عليه 7 أيام → اعرضه تاني
+        return (Date.now() - parseInt(d)) < (7 * 24 * 60 * 60 * 1000);
+    } catch(e) { return false; }
+}
+
+function closePwaBanner() {
+    document.getElementById('pwa-banner').style.display  = 'none';
+    document.getElementById('ios-banner').style.display  = 'none';
+    try { localStorage.setItem(PWA_DISMISSED_KEY, Date.now()); } catch(e) {}
+}
+
+// ── Android / Chrome: beforeinstallprompt event ──────
+window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    deferredPrompt = e;
+
+    if (wasDismissed()) return;
+
+    // اعرض البانر بعد ثانيتين
+    setTimeout(function() {
+        document.getElementById('pwa-banner').style.display = 'flex';
+    }, 2000);
+});
+
+// زرار التثبيت
+var installBtn = document.getElementById('pwa-install-btn');
+if (installBtn) {
+    installBtn.addEventListener('click', function() {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(function(choice) {
+            if (choice.outcome === 'accepted') {
+                console.log('[PWA] User accepted install');
+                document.getElementById('pwa-banner').style.display = 'none';
+            }
+            deferredPrompt = null;
+        });
+    });
+}
+
+// زرار "لأ"
+var dismissBtn = document.getElementById('pwa-dismiss-btn');
+if (dismissBtn) {
+    dismissBtn.addEventListener('click', closePwaBanner);
+}
+
+// ── iOS Safari: مفيش beforeinstallprompt ─────────────
+function isIOS() {
+    return /iphone|ipad|ipod/i.test(navigator.userAgent) &&
+           !window.MSStream;
+}
+function isInStandaloneMode() {
+    return window.navigator.standalone === true ||
+           window.matchMedia('(display-mode: standalone)').matches;
+}
+
+window.addEventListener('load', function() {
+    if (isIOS() && !isInStandaloneMode() && !wasDismissed()) {
+        setTimeout(function() {
+            document.getElementById('ios-banner').style.display = 'block';
+        }, 2000);
+    }
+});
+
+// لما يتثبت خليه يخفي البانر
+window.addEventListener('appinstalled', function() {
+    document.getElementById('pwa-banner').style.display = 'none';
+    console.log('[PWA] App installed!');
+});
+</script>
+
 </body>
 </html>
