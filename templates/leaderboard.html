@@ -1,59 +1,58 @@
 {% extends 'base.html' %}
-{% block title %}الترتيب - Guess Up{% endblock %}
+{% block title %}الترتيب — Guess Up{% endblock %}
 
 {% block extra_css %}
 <style>
-.lb-tabs { display:flex;background:var(--surface);border-radius:12px;padding:4px;margin-bottom:18px;gap:3px; }
-.lb-tab  {
-    flex:1;padding:8px 4px;border:none;border-radius:9px;
+.tabs-bar { display:flex;background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius);padding:3px;gap:3px;margin-bottom:18px; }
+.t-btn { flex:1;padding:7px 4px;border:none;border-radius:8px;
     font-family:'Cairo',sans-serif;font-size:.85rem;font-weight:700;
-    cursor:pointer;color:var(--muted);background:transparent;transition:.2s;
-}
-.lb-tab.active { background:var(--accent);color:#fff; }
+    cursor:pointer;color:var(--muted);background:transparent;transition:.15s; }
+.t-btn.active { background:var(--blue);color:#fff; }
 
 .lb-table { width:100%;border-collapse:collapse; }
-.lb-table th { padding:9px 12px;text-align:right;color:var(--muted);font-size:.78rem;font-weight:600;border-bottom:1px solid var(--border); }
-.lb-table td { padding:11px 12px;border-bottom:1px solid var(--border);font-size:.9rem;vertical-align:middle; }
+.lb-table th { text-align:right;padding:8px 12px;font-size:.72rem;
+    color:var(--muted);border-bottom:1px solid var(--border);
+    text-transform:uppercase;letter-spacing:.5px; }
+.lb-table td { padding:11px 12px;border-bottom:1px solid var(--border);vertical-align:middle; }
 .lb-table tr:last-child td { border-bottom:none; }
-.lb-table tr:hover td { background:rgba(124,58,237,.04); }
+.lb-table tr:hover td { background:rgba(79,110,247,.04); }
 
-.rank-badge {
-    width:26px;height:26px;border-radius:50%;display:inline-flex;
-    align-items:center;justify-content:center;font-weight:900;font-size:.8rem;
+.rank-num {
+    width:28px;height:28px;border-radius:50%;display:inline-flex;
+    align-items:center;justify-content:center;font-weight:900;font-size:.82rem;
 }
-.rank-1 { background:linear-gradient(135deg,#ffd700,#ff8c00);color:#000; }
-.rank-2 { background:linear-gradient(135deg,#c0c0c0,#888);color:#000; }
-.rank-3 { background:linear-gradient(135deg,#cd7f32,#8b4513);color:#fff; }
-.rank-n { background:var(--surface);color:var(--muted); }
+.rn-1 { background:#f0b429;color:#0e1117; }
+.rn-2 { background:#94a3b8;color:#0e1117; }
+.rn-3 { background:#cd7f32;color:#fff; }
+.rn-n { background:var(--card2);color:var(--muted); }
 
-.player-link { display:flex;align-items:center;gap:7px;text-decoration:none;color:var(--text);font-weight:700; }
-.player-link:hover { color:var(--accent); }
-.avatar-xs    { width:26px;height:26px;border-radius:50%;object-fit:cover;border:1px solid var(--border); }
-.avatar-xs-ph { width:26px;height:26px;border-radius:50%;background:var(--surface);border:1px solid var(--border);
-                display:inline-flex;align-items:center;justify-content:center;font-size:.8rem; }
+.p-link { display:flex;align-items:center;gap:8px;text-decoration:none;
+    color:var(--text);font-weight:700; }
+.p-link:hover { color:var(--blue); }
+.av-xs { width:26px;height:26px;border-radius:50%;object-fit:cover;
+    border:1px solid var(--border); }
+.av-ph { width:26px;height:26px;border-radius:50%;background:var(--card2);
+    border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:.75rem; }
 
-.pts-cell { color:var(--accent2);font-weight:700; }
-.me-row td { background:rgba(124,58,237,.07)!important; }
-
-/* م1: Rank badge في الـ leaderboard */
-.rank-tag {
-    font-size:.72rem;font-weight:700;border-radius:6px;
-    padding:2px 7px;border:1px solid;
-}
+.pts-cell { color:var(--gold);font-weight:700; }
+.win-cell { color:var(--green);font-weight:700; }
+.me-row td { background:rgba(79,110,247,.06)!important; }
+.rank-tag { font-size:.72rem;font-weight:700;border-radius:20px;padding:2px 8px;border:1px solid; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container">
-    <div style="text-align:center;padding:20px 0 14px">
-        <h1 style="font-size:1.5rem;font-weight:900">🏆 قائمة الترتيب</h1>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <h1 style="font-size:1.2rem;font-weight:900">🏆 الترتيب</h1>
+        <a href="/lobby" class="btn btn-ghost btn-sm">← اللوبي</a>
     </div>
 
-    <!-- م13: 3 Tabs -->
-    <div class="lb-tabs">
-        <button class="lb-tab active" onclick="switchTab('alltime',this)">📊 كل الوقت</button>
-        <button class="lb-tab"       onclick="switchTab('weekly',this)">📅 الأسبوع</button>
-        <button class="lb-tab"       onclick="switchTab('today',this)">🔥 اليوم</button>
+    <div class="tabs-bar">
+        <button class="t-btn active" onclick="switchTab('alltime',this)">كل الوقت</button>
+        <button class="t-btn"       onclick="switchTab('weekly',this)">هذا الأسبوع</button>
+        <button class="t-btn"       onclick="switchTab('today',this)">اليوم</button>
     </div>
 
     <!-- All Time -->
@@ -62,69 +61,43 @@
         <table class="lb-table">
             <thead><tr><th>#</th><th>اللاعب</th><th>الرتبة</th><th>النقاط</th></tr></thead>
             <tbody>
-            {% for p in players %}
-            {% set r = p.rank %}
-            <tr {% if session.player_id == p.id %}class="me-row"{% endif %}>
-                <td>
-                    <span class="rank-badge rank-{% if loop.index<=3 %}{{loop.index}}{% else %}n{% endif %}">
-                        {{loop.index}}
-                    </span>
-                </td>
-                <td>
-                    <a href="/player/{{ p.id }}" class="player-link">
-                        {% if p.avatar %}
-                            <img src="/static/avatars/{{ p.avatar }}" class="avatar-xs" alt="">
-                        {% else %}
-                            <span class="avatar-xs-ph">👤</span>
-                        {% endif %}
-                        {{ p.player_name }}
-                        {% if session.player_id == p.id %}
-                            <span style="color:var(--accent);font-size:.72rem">(أنت)</span>
-                        {% endif %}
-                    </a>
-                </td>
-                <td>
-                    <span class="rank-tag" data-rank-color="{{ r.color }}">
-                        {{ r.icon }} {{ r.name }}
-                    </span>
-                </td>
-                <td class="pts-cell">{{ p.points }} 💰</td>
-            </tr>
-            {% endfor %}
+            {% for p in players %}{% set r = p.rank %}
+            <tr {% if session.player_id==p.id %}class="me-row"{% endif %}>
+                <td><span class="rank-num {% if loop.index==1 %}rn-1{% elif loop.index==2 %}rn-2{% elif loop.index==3 %}rn-3{% else %}rn-n{% endif %}">{{loop.index}}</span></td>
+                <td><a href="/player/{{p.id}}" class="p-link">
+                    {% if p.avatar %}<img src="/static/avatars/{{p.avatar}}" class="av-xs">
+                    {% else %}<span class="av-ph">👤</span>{% endif %}
+                    {{p.player_name}}
+                    {% if session.player_id==p.id %}<span style="color:var(--blue);font-size:.72rem">(أنت)</span>{% endif %}
+                </a></td>
+                <td><span class="rank-tag" data-rc="{{r.color}}">{{r.icon}} {{r.name}}</span></td>
+                <td class="pts-cell">{{p.points}}</td>
+            </tr>{% endfor %}
             </tbody>
         </table>
         {% else %}
-        <div style="text-align:center;color:var(--muted);padding:40px">مفيش لاعبين بعد 😅</div>
+        <div style="text-align:center;color:var(--muted);padding:40px">مفيش لاعبين بعد 🎮</div>
         {% endif %}
     </div>
 
-    <!-- Weekly م13 -->
-    <div id="tab-weekly" class="hidden">
+    <!-- Weekly -->
+    <div id="tab-weekly" style="display:none">
         {% if weekly %}
         <table class="lb-table">
-            <thead><tr><th>#</th><th>اللاعب</th><th>مكاسب الأسبوع</th><th>انتصارات</th></tr></thead>
+            <thead><tr><th>#</th><th>اللاعب</th><th>المكاسب</th><th>انتصارات</th></tr></thead>
             <tbody>
-            {% for w in weekly %}
-            {% set r = w.player.rank %}
-            <tr {% if session.player_id == w.player.id %}class="me-row"{% endif %}>
-                <td>
-                    <span class="rank-badge rank-{% if loop.index<=3 %}{{loop.index}}{% else %}n{% endif %}">{{loop.index}}</span>
-                </td>
-                <td>
-                    <a href="/player/{{ w.player.id }}" class="player-link">
-                        {% if w.player.avatar %}
-                            <img src="/static/avatars/{{ w.player.avatar }}" class="avatar-xs" alt="">
-                        {% else %}
-                            <span class="avatar-xs-ph">👤</span>
-                        {% endif %}
-                        {{ w.player.player_name }}
-                        <span class="rank-tag" data-rank-color="{{ r.color }}" style="font-size:.68rem">{{ r.icon }}</span>
-                    </a>
-                </td>
-                <td class="pts-cell">+{{ w.earned }} 💰</td>
-                <td style="color:var(--green);font-weight:700">{{ w.wins }} 🏆</td>
-            </tr>
-            {% endfor %}
+            {% for w in weekly %}{% set r = w.player.rank %}
+            <tr {% if session.player_id==w.player.id %}class="me-row"{% endif %}>
+                <td><span class="rank-num {% if loop.index==1 %}rn-1{% elif loop.index==2 %}rn-2{% elif loop.index==3 %}rn-3{% else %}rn-n{% endif %}">{{loop.index}}</span></td>
+                <td><a href="/player/{{w.player.id}}" class="p-link">
+                    {% if w.player.avatar %}<img src="/static/avatars/{{w.player.avatar}}" class="av-xs">
+                    {% else %}<span class="av-ph">👤</span>{% endif %}
+                    {{w.player.player_name}}
+                    <span class="rank-tag" data-rc="{{r.color}}" style="font-size:.68rem">{{r.icon}}</span>
+                </a></td>
+                <td class="pts-cell">+{{w.earned}}</td>
+                <td class="win-cell">{{w.wins}} 🏆</td>
+            </tr>{% endfor %}
             </tbody>
         </table>
         {% else %}
@@ -132,63 +105,46 @@
         {% endif %}
     </div>
 
-    <!-- Today م13 -->
-    <div id="tab-today" class="hidden">
+    <!-- Today -->
+    <div id="tab-today" style="display:none">
         {% if today %}
         <table class="lb-table">
             <thead><tr><th>#</th><th>اللاعب</th><th>مكاسب اليوم</th><th>انتصارات</th></tr></thead>
             <tbody>
-            {% for w in today %}
-            {% set r = w.player.rank %}
-            <tr {% if session.player_id == w.player.id %}class="me-row"{% endif %}>
-                <td>
-                    <span class="rank-badge rank-{% if loop.index<=3 %}{{loop.index}}{% else %}n{% endif %}">{{loop.index}}</span>
-                </td>
-                <td>
-                    <a href="/player/{{ w.player.id }}" class="player-link">
-                        {% if w.player.avatar %}
-                            <img src="/static/avatars/{{ w.player.avatar }}" class="avatar-xs" alt="">
-                        {% else %}
-                            <span class="avatar-xs-ph">👤</span>
-                        {% endif %}
-                        {{ w.player.player_name }}
-                        <span class="rank-tag" data-rank-color="{{ r.color }}" style="font-size:.68rem">{{ r.icon }}</span>
-                    </a>
-                </td>
-                <td class="pts-cell">+{{ w.earned }} 💰</td>
-                <td style="color:var(--green);font-weight:700">{{ w.wins }} 🏆</td>
-            </tr>
-            {% endfor %}
+            {% for w in today %}{% set r = w.player.rank %}
+            <tr {% if session.player_id==w.player.id %}class="me-row"{% endif %}>
+                <td><span class="rank-num {% if loop.index==1 %}rn-1{% elif loop.index==2 %}rn-2{% elif loop.index==3 %}rn-3{% else %}rn-n{% endif %}">{{loop.index}}</span></td>
+                <td><a href="/player/{{w.player.id}}" class="p-link">
+                    {% if w.player.avatar %}<img src="/static/avatars/{{w.player.avatar}}" class="av-xs">
+                    {% else %}<span class="av-ph">👤</span>{% endif %}
+                    {{w.player.player_name}}
+                </a></td>
+                <td class="pts-cell">+{{w.earned}}</td>
+                <td class="win-cell">{{w.wins}} 🏆</td>
+            </tr>{% endfor %}
             </tbody>
         </table>
         {% else %}
-        <div style="text-align:center;color:var(--muted);padding:40px">مفيش مباريات النهاردة لحد دلوقتي 🕐</div>
+        <div style="text-align:center;color:var(--muted);padding:40px">مفيش مباريات النهاردة 🕐</div>
         {% endif %}
-    </div>
-
-    <div style="text-align:center;margin-top:18px">
-        <a href="/lobby" class="btn btn-ghost">🏠 رجوع للوبي</a>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-// Apply rank colors from data attributes (avoids CSS linting errors)
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('[data-rank-color]').forEach(function(el) {
-        var c = el.dataset.rankColor;
-        el.style.color = c;
-        el.style.borderColor = c + '55';
-        el.style.background  = c + '18';
+document.addEventListener('DOMContentLoaded',function(){
+    document.querySelectorAll('[data-rc]').forEach(function(el){
+        var c=el.dataset.rc;
+        el.style.color=c; el.style.borderColor=c+'55'; el.style.background=c+'18';
     });
 });
-
-function switchTab(name, btn){
-    ['alltime','weekly','today'].forEach(n=>
-        document.getElementById('tab-'+n).classList.add('hidden'));
-    document.querySelectorAll('.lb-tab').forEach(b=>b.classList.remove('active'));
-    document.getElementById('tab-'+name).classList.remove('hidden');
+function switchTab(name,btn){
+    ['alltime','weekly','today'].forEach(function(n){
+        document.getElementById('tab-'+n).style.display='none';
+    });
+    document.querySelectorAll('.t-btn').forEach(function(b){b.classList.remove('active');});
+    document.getElementById('tab-'+name).style.display='block';
     btn.classList.add('active');
 }
 </script>

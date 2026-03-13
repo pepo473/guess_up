@@ -24,6 +24,13 @@ ALLOWED_EXT = {'png','jpg','jpeg','gif','webp'}
 db.init_app(app)
 socketio = SocketIO(app, cors_allowed_origins="*", manage_session=False)
 
+@app.context_processor
+def inject_player():
+    def get_player():
+        pid=session.get('player_id')
+        return Player.query.filter_by(id=pid).first() if pid else None
+    return dict(get_player=get_player)
+
 # ── in-memory ────────────────────────────────────────────────────────────────
 room_secrets     = {}   # room_code -> {player_id: secret}
 room_players     = {}   # room_code -> {player_id: name}
