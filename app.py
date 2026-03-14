@@ -139,19 +139,44 @@ def login():
     name, pw = request.form.get('name','').strip(), request.form.get('password','')
     player, err = login_player(name, pw)
     if err: return render_template('index.html', error=err, tab='login', login_name=name)
-    # تحقق من الحظر والحذف
-    if player.is_deleted:
-        return render_template('index.html', error='❌ هذا الحساب تم حذفه', tab='login', login_name=name)
-    if player.ban_active:
+    # تحقق من الحظر والحذف بـ raw SQL عشان الـ columns ممكن تكون مش موجودة لسه
+    try:
+        import sqlite3 as _sq
         from datetime import datetime as _dt
-        if player.ban_until:
-            until = player.ban_until.strftime('%Y/%m/%d %H:%M')
-            msg = f'🚫 حسابك محظور حتى {until}'
-        else:
-            msg = '🚫 حسابك محظور بشكل دائم'
-        if player.ban_reason:
-            msg += f' — السبب: {player.ban_reason}'
-        return render_template('index.html', error=msg, tab='login', login_name=name)
+        conn = _sq.connect(os.path.join(app.instance_path, 'guess_up.db'))
+        row  = conn.execute(
+            "SELECT is_deleted, is_banned, ban_until, ban_reason FROM players WHERE id=?",
+            (player.id,)
+        ).fetchone()
+        conn.close()
+        if row:
+            is_deleted, is_banned, ban_until, ban_reason = row
+            if is_deleted:
+                return render_template('index.html', error='❌ هذا الحساب تم حذفه',
+                                       tab='login', login_name=name)
+            if is_banned:
+                if ban_until:
+                    try:
+                        until_dt = _dt.strptime(ban_until, '%Y-%m-%d %H:%M:%S')
+                        if _dt.utcnow() < until_dt:
+                            msg = f'🚫 حسابك محظور حتى {until_dt.strftime("%Y/%m/%d %H:%M")}'
+                            if ban_reason: msg += f' — السبب: {ban_reason}'
+                            return render_template('index.html', error=msg,
+                                                   tab='login', login_name=name)
+                        # الحظر انتهى — ارفعه تلقائياً
+                        c2 = _sq.connect(os.path.join(app.instance_path, 'guess_up.db'))
+                        c2.execute("UPDATE players SET is_banned=0 WHERE id=?", (player.id,))
+                        c2.commit(); c2.close()
+                    except Exception:
+                        pass
+                else:
+                    # حظر دائم
+                    msg = '🚫 حسابك محظور بشكل دائم'
+                    if ban_reason: msg += f' — السبب: {ban_reason}'
+                    return render_template('index.html', error=msg,
+                                           tab='login', login_name=name)
+    except Exception:
+        pass  # لو في أي خطأ نسمح بالدخول عادي
     session['player_id'] = player.id
     session['player_name'] = player.player_name
     return redirect(url_for('lobby'))
