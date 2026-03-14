@@ -319,15 +319,42 @@ def leaderboard():
     today    = datetime.utcnow() - timedelta(hours=24)
 
     def weekly_board(since, lim=20):
-        rows = (db.session.query(Match.winner_id,
-                    db.func.sum(Match.bet).label('earned'),
-                    db.func.count(Match.id).label('wins'))
-                .filter(Match.created_at >= since, Match.winner_id != None)
-                .group_by(Match.winner_id)
-                .order_by(db.func.sum(Match.bet).desc()).limit(lim).all())
-        return [{'player': get_player_by_id(r.winner_id),
-                 'earned': r.earned, 'wins': r.wins}
-                for r in rows if get_player_by_id(r.winner_id)]
+        import sqlite3 as _sq
+        try:
+            db_path = os.path.join(app.instance_path, 'guess_up.db')
+            conn = _sq.connect(db_path)
+            # استثني المحذوفين والمحظورين من الـ leaderboard
+            raw = conn.execute("""
+                SELECT m.winner_id,
+                       SUM(m.bet) as earned,
+                       COUNT(m.id) as wins
+                FROM matches m
+                JOIN players p ON p.id = m.winner_id
+                WHERE m.created_at >= ?
+                  AND m.winner_id IS NOT NULL
+                  AND (p.is_deleted = 0 OR p.is_deleted IS NULL)
+                  AND (p.is_banned  = 0 OR p.is_banned  IS NULL)
+                GROUP BY m.winner_id
+                ORDER BY earned DESC
+                LIMIT ?
+            """, (since.strftime('%Y-%m-%d %H:%M:%S'), lim)).fetchall()
+            conn.close()
+            result = []
+            for r in raw:
+                p = get_player_by_id(r[0])
+                if p: result.append({'player': p, 'earned': r[1], 'wins': r[2]})
+            return result
+        except Exception:
+            # fallback
+            rows = (db.session.query(Match.winner_id,
+                        db.func.sum(Match.bet).label('earned'),
+                        db.func.count(Match.id).label('wins'))
+                    .filter(Match.created_at >= since, Match.winner_id != None)
+                    .group_by(Match.winner_id)
+                    .order_by(db.func.sum(Match.bet).desc()).limit(lim).all())
+            return [{'player': get_player_by_id(r.winner_id),
+                     'earned': r.earned, 'wins': r.wins}
+                    for r in rows if get_player_by_id(r.winner_id)]
 
     return render_template('leaderboard.html',
                            players=all_time,

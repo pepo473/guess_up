@@ -112,6 +112,25 @@ def claim_daily_reward(player_id):
     return DAILY_REWARD, None
 
 def get_leaderboard(limit=20):
+    import sqlite3, os
+    from flask import current_app
+    try:
+        db_path = os.path.join(current_app.instance_path, 'guess_up.db')
+        conn = sqlite3.connect(db_path)
+        rows = conn.execute(
+            "SELECT id FROM players WHERE (is_deleted=0 OR is_deleted IS NULL) "
+            "AND (is_banned=0 OR is_banned IS NULL) "
+            "ORDER BY points DESC LIMIT ?", (limit,)
+        ).fetchall()
+        conn.close()
+        ids = [r[0] for r in rows]
+        if ids:
+            # نرتبهم بنفس ترتيب الـ SQL
+            players_map = {p.id: p for p in Player.query.filter(Player.id.in_(ids)).all()}
+            return [players_map[i] for i in ids if i in players_map]
+    except Exception:
+        pass
+    # fallback
     return Player.query.order_by(Player.points.desc()).limit(limit).all()
 
 def can_claim_daily(player):
