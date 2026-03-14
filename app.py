@@ -620,17 +620,50 @@ ADMIN_SECRET = 'guessup_admin_2024'   # ← غيّره لو حابب
 def admin_panel():
     if session.get('admin_auth') != ADMIN_SECRET:
         return redirect(url_for('admin_login'))
-    try:
-        players = Player.query.filter_by(is_deleted=False).order_by(Player.points.desc()).all()
-        deleted = Player.query.filter_by(is_deleted=True).order_by(Player.deleted_at.desc()).all()
-        banned  = Player.query.filter_by(is_banned=True, is_deleted=False).all()
-    except Exception:
-        # لو الـ columns الجديدة مش موجودة لسه → نرجع كل اللاعبين بدونها
-        players = Player.query.order_by(Player.points.desc()).all()
-        deleted = []
-        banned  = []
-        for p in players:
-            if not hasattr(p, 'is_deleted'): break
+    import sqlite3 as _sq
+    db_path = os.path.join(app.instance_path, 'guess_up.db')
+    conn    = _sq.connect(db_path)
+    conn.row_factory = _sq.Row
+
+    # تأكد إن الـ columns موجودة — لو لأ أضفهم فوراً
+    existing = [r[1] for r in conn.execute("PRAGMA table_info(players)")]
+    if 'is_deleted' not in existing:
+        conn.execute("ALTER TABLE players ADD COLUMN is_deleted BOOLEAN DEFAULT 0")
+        conn.commit()
+    if 'is_banned' not in existing:
+        conn.execute("ALTER TABLE players ADD COLUMN is_banned BOOLEAN DEFAULT 0")
+        conn.commit()
+    if 'ban_until' not in existing:
+        conn.execute("ALTER TABLE players ADD COLUMN ban_until DATETIME")
+        conn.commit()
+    if 'ban_reason' not in existing:
+        conn.execute("ALTER TABLE players ADD COLUMN ban_reason VARCHAR(200)")
+        conn.commit()
+    if 'deleted_at' not in existing:
+        conn.execute("ALTER TABLE players ADD COLUMN deleted_at DATETIME")
+        conn.commit()
+
+    # جيب اللاعبين بـ raw SQL
+    raw_active  = conn.execute(
+        "SELECT * FROM players WHERE is_deleted=0 OR is_deleted IS NULL ORDER BY points DESC"
+    ).fetchall()
+    raw_deleted = conn.execute(
+        "SELECT * FROM players WHERE is_deleted=1 ORDER BY deleted_at DESC"
+    ).fetchall()
+    raw_banned  = conn.execute(
+        "SELECT * FROM players WHERE is_banned=1 AND (is_deleted=0 OR is_deleted IS NULL)"
+    ).fetchall()
+    conn.close()
+
+    # حوّل لـ Player objects عشان الـ template يشتغل
+    def row_to_player(row):
+        p = Player.query.get(row['id'])
+        return p
+
+    players = [p for p in (row_to_player(r) for r in raw_active)  if p]
+    deleted = [p for p in (row_to_player(r) for r in raw_deleted) if p]
+    banned  = [p for p in (row_to_player(r) for r in raw_banned)  if p]
+
     hint = ADMIN_SECRET[:4] + '****'
     return render_template('admin.html', players=players, deleted=deleted,
                            banned=banned, secret_hint=hint)
