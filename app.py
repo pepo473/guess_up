@@ -620,10 +620,18 @@ ADMIN_SECRET = 'guessup_admin_2024'   # ← غيّره لو حابب
 def admin_panel():
     if session.get('admin_auth') != ADMIN_SECRET:
         return redirect(url_for('admin_login'))
-    players  = Player.query.filter_by(is_deleted=False).order_by(Player.points.desc()).all()
-    deleted  = Player.query.filter_by(is_deleted=True).order_by(Player.deleted_at.desc()).all()
-    banned   = Player.query.filter_by(is_banned=True, is_deleted=False).all()
-    hint     = ADMIN_SECRET[:4] + '****'
+    try:
+        players = Player.query.filter_by(is_deleted=False).order_by(Player.points.desc()).all()
+        deleted = Player.query.filter_by(is_deleted=True).order_by(Player.deleted_at.desc()).all()
+        banned  = Player.query.filter_by(is_banned=True, is_deleted=False).all()
+    except Exception:
+        # لو الـ columns الجديدة مش موجودة لسه → نرجع كل اللاعبين بدونها
+        players = Player.query.order_by(Player.points.desc()).all()
+        deleted = []
+        banned  = []
+        for p in players:
+            if not hasattr(p, 'is_deleted'): break
+    hint = ADMIN_SECRET[:4] + '****'
     return render_template('admin.html', players=players, deleted=deleted,
                            banned=banned, secret_hint=hint)
 
