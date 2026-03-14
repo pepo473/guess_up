@@ -138,3 +138,81 @@ class PlayerAchievement(db.Model):
 
     player = db.relationship('Player', foreign_keys=[player_id])
     __table_args__ = (db.UniqueConstraint('player_id', 'key'),)
+
+
+# ══════════════════════════════
+#  FRIENDSHIP
+# ══════════════════════════════
+class Friendship(db.Model):
+    __tablename__ = 'friendships'
+    id         = db.Column(db.Integer, primary_key=True)
+    sender_id  = db.Column(db.Integer, db.ForeignKey('players.id'), nullable=False)
+    receiver_id= db.Column(db.Integer, db.ForeignKey('players.id'), nullable=False)
+    # pending / accepted / rejected
+    status     = db.Column(db.String(20), default='pending')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    sender   = db.relationship('Player', foreign_keys=[sender_id])
+    receiver = db.relationship('Player', foreign_keys=[receiver_id])
+
+    __table_args__ = (db.UniqueConstraint('sender_id','receiver_id'),)
+
+    @staticmethod
+    def are_friends(pid1, pid2):
+        return Friendship.query.filter(
+            db.or_(
+                db.and_(Friendship.sender_id==pid1,   Friendship.receiver_id==pid2),
+                db.and_(Friendship.sender_id==pid2,   Friendship.receiver_id==pid1)
+            ), Friendship.status=='accepted'
+        ).first() is not None
+
+    @staticmethod
+    def get_friends(player_id):
+        rows = Friendship.query.filter(
+            db.or_(
+                Friendship.sender_id==player_id,
+                Friendship.receiver_id==player_id
+            ), Friendship.status=='accepted'
+        ).all()
+        ids = []
+        for r in rows:
+            ids.append(r.receiver_id if r.sender_id==player_id else r.sender_id)
+        return Player.query.filter(Player.id.in_(ids)).all() if ids else []
+
+
+# ══════════════════════════════
+#  NOTIFICATION
+# ══════════════════════════════
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+    id         = db.Column(db.Integer, primary_key=True)
+    player_id  = db.Column(db.Integer, db.ForeignKey('players.id'), nullable=False)
+    # friend_request / friend_accept / friend_reject /
+    # room_invite / punishment / chat_msg
+    type       = db.Column(db.String(30), nullable=False)
+    title      = db.Column(db.String(100), nullable=False)
+    body       = db.Column(db.String(255), nullable=False)
+    link       = db.Column(db.String(100), nullable=True)   # URL للضغط عليها
+    from_id    = db.Column(db.Integer, db.ForeignKey('players.id'), nullable=True)
+    is_read    = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    player    = db.relationship('Player', foreign_keys=[player_id])
+    from_user = db.relationship('Player', foreign_keys=[from_id])
+
+
+# ══════════════════════════════
+#  CHAT MESSAGE (بين أصدقاء)
+# ══════════════════════════════
+class ChatMessage(db.Model):
+    __tablename__ = 'chat_messages'
+    id         = db.Column(db.Integer, primary_key=True)
+    sender_id  = db.Column(db.Integer, db.ForeignKey('players.id'), nullable=False)
+    receiver_id= db.Column(db.Integer, db.ForeignKey('players.id'), nullable=False)
+    text       = db.Column(db.String(500), nullable=False)
+    is_read    = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    sender   = db.relationship('Player', foreign_keys=[sender_id])
+    receiver = db.relationship('Player', foreign_keys=[receiver_id])

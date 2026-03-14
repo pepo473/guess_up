@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, session, redirect, url_for, jsonify
 from flask_socketio import SocketIO, emit, join_room as sio_join_room
-from models import db, Player, Room, Punishment, Match
+from models import db, Player, Room, Punishment, Match, Friendship, Notification, ChatMessage
 from auth import register_player, login_player, get_player_by_id, is_logged_in
 from rooms import create_room, join_room, get_room
 from points import (transfer_points, award_bankrupt_mode_points, is_bankrupt, get_rank,
@@ -49,6 +49,33 @@ def allowed_file(fn):
     return '.' in fn and fn.rsplit('.',1)[1].lower() in ALLOWED_EXT
 
 
+
+# ════════════════════════════════════════════════════════
+# HELPERS — Notifications
+# ════════════════════════════════════════════════════════
+
+def send_notification(player_id, ntype, title, body, from_id=None, link=None):
+    """يحفظ notification ويبعته real-time لو اللاعب متصل"""
+    from datetime import datetime as _dt
+    n = Notification(
+        player_id=player_id, type=ntype,
+        title=title, body=body,
+        from_id=from_id, link=link,
+        created_at=_dt.utcnow()
+    )
+    db.session.add(n)
+    db.session.commit()
+    # بعته real-time عبر SocketIO
+    socketio.emit('new_notification', {
+        'id':    n.id,
+        'type':  ntype,
+        'title': title,
+        'body':  body,
+        'link':  link or '',
+        'from_id': from_id
+    }, room=f'user_{player_id}')
+    return n
+
 def finish_game(room_code, winner_id, loser_id, bet, guesses=0, is_bot=False):
     room = get_room(room_code)
     if not room: return [], {}
@@ -82,6 +109,8 @@ def finish_game(room_code, winner_id, loser_id, bet, guesses=0, is_bot=False):
     room_guesses.pop(room_code, None)
     room_spectators.pop(room_code, None)
 
+    # ── notification للخاسر بالعقاب لو الفائز كتبه لاحقاً ──
+    # (الـ punishment route هيتكلم بعدين)
     return new_ach or [], transfer_info
 
 
@@ -165,6 +194,21 @@ def create_room_route():
 
     if is_bot: create_bot_session(room.room_code)
     player_status[session['player_id']] = 'waiting'  # م5
+
+    # ── بعت notification لأصدقاء اللاعب لو الغرفة عامة ──
+    if is_public and not is_bot:
+        creator = get_player_by_id(session['player_id'])
+        friends = Friendship.get_friends(session['player_id'])
+        for fr in friends:
+            send_notification(
+                player_id=fr.id,
+                ntype='room_invite',
+                title=f'🎮 {creator.player_name} عامل غرفة!',
+                body=f'صاحبك {creator.player_name} عامل غرفة برهان {room.bet_points} نقطة — خش العب معاه!',
+                from_id=session['player_id'],
+                link=f'/room/{room.room_code}'
+            )
+
     return jsonify({
         'room_code': room.room_code,
         'event':     room.random_event,
@@ -217,6 +261,16 @@ def punishment(room_code):
                               loser_id=loser_id, punishment_text=text, whatsapp_number=whatsapp))
     db.session.commit()
     socketio.emit('punishment_received', {'text': text, 'whatsapp': whatsapp}, room=room_code)
+    # ── notification للخاسر يوصله العقاب حتى لو خرج ──
+    winner = get_player_by_id(room.winner_id)
+    send_notification(
+        player_id=loser_id,
+        ntype='punishment',
+        title=f'😈 عقاب من {winner.player_name if winner else "الفائز"}',
+        body=text[:100],
+        from_id=room.winner_id,
+        link=f'/room/{room_code}'
+    )
     return jsonify({'ok': True})
 
 
@@ -598,6 +652,247 @@ def admin_edit_points():
 def admin_logout():
     session.pop('admin_auth', None)
     return redirect(url_for('index'))
+
+
+# ════════════════════════════════════════════════════════
+# FRIENDS & NOTIFICATIONS ROUTES
+# ════════════════════════════════════════════════════════
+
+@app.route('/friends')
+def friends_page():
+    if not is_logged_in(session): return redirect(url_for('index'))
+    me      = get_player_by_id(session['player_id'])
+    friends = Friendship.get_friends(me.id)
+
+    # طلبات الصداقة الواردة
+    incoming = Friendship.query.filter_by(
+        receiver_id=me.id, status='pending'
+    ).all()
+
+    # طلبات الصداقة الصادرة
+    outgoing = Friendship.query.filter_by(
+        sender_id=me.id, status='pending'
+    ).all()
+
+    return render_template('friends.html',
+        me=me, friends=friends,
+        incoming=incoming, outgoing=outgoing
+    )
+
+
+@app.route('/friends/search')
+def friends_search():
+    if not is_logged_in(session): return jsonify([])
+    q   = request.args.get('q','').strip()
+    me  = session['player_id']
+    if len(q) < 2: return jsonify([])
+    players = Player.query.filter(
+        Player.player_name.ilike(f'%{q}%'),
+        Player.id != me
+    ).limit(10).all()
+    result = []
+    for p in players:
+        # حالة الصداقة
+        fr = Friendship.query.filter(
+            db.or_(
+                db.and_(Friendship.sender_id==me,   Friendship.receiver_id==p.id),
+                db.and_(Friendship.sender_id==p.id, Friendship.receiver_id==me)
+            )
+        ).first()
+        status = fr.status if fr else 'none'
+        is_sender = fr.sender_id == me if fr else False
+        result.append({
+            'id':        p.id,
+            'name':      p.player_name,
+            'points':    p.points,
+            'avatar':    p.avatar,
+            'status':    status,
+            'is_sender': is_sender
+        })
+    return jsonify(result)
+
+
+@app.route('/friends/request/<int:pid>', methods=['POST'])
+def friend_request(pid):
+    if not is_logged_in(session): return jsonify({'error':'مش مسجل'}), 401
+    me = session['player_id']
+    if me == pid: return jsonify({'error':'مش ممكن تبعت لنفسك'}), 400
+
+    # تأكد مش موجود أصلاً
+    exists = Friendship.query.filter(
+        db.or_(
+            db.and_(Friendship.sender_id==me,  Friendship.receiver_id==pid),
+            db.and_(Friendship.sender_id==pid, Friendship.receiver_id==me)
+        )
+    ).first()
+    if exists: return jsonify({'error':'طلب موجود بالفعل'}), 400
+
+    fr = Friendship(sender_id=me, receiver_id=pid, status='pending')
+    db.session.add(fr)
+    db.session.commit()
+
+    sender = get_player_by_id(me)
+    send_notification(
+        player_id=pid, ntype='friend_request',
+        title='طلب صداقة جديد 👋',
+        body=f'{sender.player_name} بعتلك طلب صداقة',
+        from_id=me, link='/friends'
+    )
+    return jsonify({'ok': True})
+
+
+@app.route('/friends/accept/<int:pid>', methods=['POST'])
+def friend_accept(pid):
+    if not is_logged_in(session): return jsonify({'error':'مش مسجل'}), 401
+    me = session['player_id']
+    fr = Friendship.query.filter_by(sender_id=pid, receiver_id=me, status='pending').first()
+    if not fr: return jsonify({'error':'مفيش طلب'}), 404
+    from datetime import datetime as _dt
+    fr.status = 'accepted'
+    fr.updated_at = _dt.utcnow()
+    db.session.commit()
+
+    me_player = get_player_by_id(me)
+    send_notification(
+        player_id=pid, ntype='friend_accept',
+        title='✅ قبل طلب صداقتك!',
+        body=f'{me_player.player_name} قبل طلب صداقتك',
+        from_id=me, link='/friends'
+    )
+    return jsonify({'ok': True})
+
+
+@app.route('/friends/reject/<int:pid>', methods=['POST'])
+def friend_reject(pid):
+    if not is_logged_in(session): return jsonify({'error':'مش مسجل'}), 401
+    me = session['player_id']
+    fr = Friendship.query.filter(
+        db.or_(
+            db.and_(Friendship.sender_id==pid, Friendship.receiver_id==me),
+            db.and_(Friendship.sender_id==me,  Friendship.receiver_id==pid)
+        )
+    ).first()
+    if fr:
+        db.session.delete(fr)
+        db.session.commit()
+    return jsonify({'ok': True})
+
+
+@app.route('/friends/remove/<int:pid>', methods=['POST'])
+def friend_remove(pid):
+    if not is_logged_in(session): return jsonify({'error':'مش مسجل'}), 401
+    me = session['player_id']
+    fr = Friendship.query.filter(
+        db.or_(
+            db.and_(Friendship.sender_id==me,  Friendship.receiver_id==pid),
+            db.and_(Friendship.sender_id==pid, Friendship.receiver_id==me)
+        )
+    ).first()
+    if fr:
+        db.session.delete(fr)
+        db.session.commit()
+    return jsonify({'ok': True})
+
+
+# ── Notifications ────────────────────────────────────────────────────────────
+@app.route('/notifications')
+def notifications_page():
+    if not is_logged_in(session): return redirect(url_for('index'))
+    me    = session['player_id']
+    notifs = Notification.query.filter_by(player_id=me)        .order_by(Notification.created_at.desc()).limit(50).all()
+    # اعمل كلهم مقروءين
+    Notification.query.filter_by(player_id=me, is_read=False)        .update({'is_read': True})
+    db.session.commit()
+    return render_template('notifications.html', notifs=notifs)
+
+
+@app.route('/api/notifications/count')
+def notif_count():
+    if not is_logged_in(session): return jsonify({'count': 0})
+    c = Notification.query.filter_by(
+        player_id=session['player_id'], is_read=False
+    ).count()
+    return jsonify({'count': c})
+
+
+@app.route('/api/notifications/mark_read', methods=['POST'])
+def notif_mark_read():
+    if not is_logged_in(session): return jsonify({'ok': False})
+    Notification.query.filter_by(
+        player_id=session['player_id'], is_read=False
+    ).update({'is_read': True})
+    db.session.commit()
+    return jsonify({'ok': True})
+
+
+# ── Chat ─────────────────────────────────────────────────────────────────────
+@app.route('/chat/<int:friend_id>')
+def chat_page(friend_id):
+    if not is_logged_in(session): return redirect(url_for('index'))
+    me = session['player_id']
+    if not Friendship.are_friends(me, friend_id):
+        return redirect(url_for('friends_page'))
+    friend = get_player_by_id(friend_id)
+    if not friend: return redirect(url_for('friends_page'))
+
+    msgs = ChatMessage.query.filter(
+        db.or_(
+            db.and_(ChatMessage.sender_id==me,        ChatMessage.receiver_id==friend_id),
+            db.and_(ChatMessage.sender_id==friend_id, ChatMessage.receiver_id==me)
+        )
+    ).order_by(ChatMessage.created_at.asc()).limit(100).all()
+
+    # اعمل الرسايل مقروءة
+    ChatMessage.query.filter_by(sender_id=friend_id, receiver_id=me, is_read=False)        .update({'is_read': True})
+    db.session.commit()
+
+    me_player = get_player_by_id(me)
+    return render_template('chat.html', friend=friend, me=me_player, msgs=msgs)
+
+
+@app.route('/api/chat/send', methods=['POST'])
+def chat_send():
+    if not is_logged_in(session): return jsonify({'error':'مش مسجل'}), 401
+    me        = session['player_id']
+    friend_id = int(request.form.get('friend_id', 0))
+    text      = request.form.get('text','').strip()[:500]
+
+    if not text or not friend_id: return jsonify({'error':'بيانات ناقصة'}), 400
+    if not Friendship.are_friends(me, friend_id):
+        return jsonify({'error':'مش أصدقاء'}), 403
+
+    msg = ChatMessage(sender_id=me, receiver_id=friend_id, text=text)
+    db.session.add(msg)
+    db.session.commit()
+
+    sender = get_player_by_id(me)
+    # Real-time للمستلم
+    socketio.emit('new_chat_msg', {
+        'msg_id':    msg.id,
+        'from_id':   me,
+        'from_name': sender.player_name,
+        'text':      text,
+        'time':      msg.created_at.strftime('%H:%M')
+    }, room=f'user_{friend_id}')
+
+    # notification للمستلم لو مش في صفحة الشات
+    send_notification(
+        player_id=friend_id, ntype='chat_msg',
+        title=f'💬 {sender.player_name}',
+        body=text[:80],
+        from_id=me, link=f'/chat/{me}'
+    )
+    return jsonify({'ok': True, 'msg_id': msg.id,
+                    'time': msg.created_at.strftime('%H:%M')})
+
+
+# ── SocketIO: Personal Room ──────────────────────────────────────────────────
+@socketio.on('join_personal_room')
+def on_join_personal(data):
+    """كل لاعب يدخل room خاص بـ user_ID عشان يستقبل notifications"""
+    pid = session.get('player_id')
+    if pid:
+        sio_join_room(f'user_{pid}')
 
 # ══════════════════════════════════════════════════════════════════════════════
 with app.app_context():

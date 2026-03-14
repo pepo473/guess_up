@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}الإشعارات — Guess Up{% endblock %}
+{% block extra_css %}
+<style>
+.notif-wrap { max-width:640px;margin:0 auto;padding:20px 14px; }
+.page-title { font-size:1.3rem;font-weight:900;margin-bottom:20px; }
+.notif-item {
+    display:flex;align-items:flex-start;gap:12px;padding:14px 16px;
+    background:var(--card);border:1px solid var(--border);
+    border-radius:var(--radius);margin-bottom:8px;
+    text-decoration:none;color:var(--text);
+    transition:border-color .15s;
+}
+.notif-item:hover   { border-color:var(--accent); }
+.notif-item.unread  { border-color:rgba(124,58,237,.4);background:rgba(124,58,237,.06); }
+.notif-icon { font-size:1.4rem;flex-shrink:0;margin-top:2px; }
+.notif-body { flex:1;min-width:0; }
+.notif-title{ font-weight:700;font-size:.9rem;margin-bottom:2px; }
+.notif-text { color:var(--muted);font-size:.82rem; }
+.notif-time { font-size:.72rem;color:var(--muted);margin-top:3px; }
+.empty-state{ text-align:center;color:var(--muted);padding:50px;font-size:.9rem; }
+
+/* Icons per type */
+.icon-friend_request { }
+.icon-friend_accept  { }
+.icon-room_invite    { }
+.icon-punishment     { }
+.icon-chat_msg       { }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="notif-wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div class="page-title">🔔 الإشعارات</div>
+        <a href="/lobby" class="btn btn-ghost btn-sm">← اللوبي</a>
+    </div>
+
+    {% set icons = {
+        'friend_request': '👋',
+        'friend_accept':  '✅',
+        'friend_reject':  '❌',
+        'room_invite':    '🎮',
+        'punishment':     '😈',
+        'chat_msg':       '💬'
+    } %}
+
+    {% if notifs %}
+        {% for n in notifs %}
+        <a href="{{ n.link or '#' }}" class="notif-item {% if not n.is_read %}unread{% endif %}">
+            <span class="notif-icon">{{ icons.get(n.type, '🔔') }}</span>
+            <div class="notif-body">
+                <div class="notif-title">{{ n.title }}</div>
+                <div class="notif-text">{{ n.body }}</div>
+                <div class="notif-time">{{ n.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
+            </div>
+        </a>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            🔕 مفيش إشعارات لسه<br>
+            <small style="margin-top:8px;display:block">لما يحصل حاجة هيظهر هنا</small>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

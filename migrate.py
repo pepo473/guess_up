@@ -59,6 +59,44 @@ def run_migrations(db_path):
         if conn.total_changes > 0:
             print(f"[migrate] 🧹 تم حذف مباريات مكررة غلط")
 
+
+    # ── friendships ─────────────────────────────────────────────────────────
+    if 'friendships' not in T:
+        c.execute("""CREATE TABLE IF NOT EXISTS friendships (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sender_id INTEGER NOT NULL REFERENCES players(id),
+            receiver_id INTEGER NOT NULL REFERENCES players(id),
+            status VARCHAR(20) DEFAULT 'pending',
+            created_at DATETIME,
+            updated_at DATETIME,
+            UNIQUE(sender_id, receiver_id))""")
+        print("[migrate] ✅ friendships table")
+
+    # ── notifications ────────────────────────────────────────────────────────
+    if 'notifications' not in T:
+        c.execute("""CREATE TABLE IF NOT EXISTS notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_id INTEGER NOT NULL REFERENCES players(id),
+            type VARCHAR(30) NOT NULL,
+            title VARCHAR(100) NOT NULL,
+            body VARCHAR(255) NOT NULL,
+            link VARCHAR(100),
+            from_id INTEGER REFERENCES players(id),
+            is_read BOOLEAN DEFAULT 0,
+            created_at DATETIME)""")
+        print("[migrate] ✅ notifications table")
+
+    # ── chat_messages ────────────────────────────────────────────────────────
+    if 'chat_messages' not in T:
+        c.execute("""CREATE TABLE IF NOT EXISTS chat_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sender_id INTEGER NOT NULL REFERENCES players(id),
+            receiver_id INTEGER NOT NULL REFERENCES players(id),
+            text VARCHAR(500) NOT NULL,
+            is_read BOOLEAN DEFAULT 0,
+            created_at DATETIME)""")
+        print("[migrate] ✅ chat_messages table")
+
     conn.commit()
     conn.close()
     print("[migrate] ✅ Done")
