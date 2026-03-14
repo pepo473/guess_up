@@ -222,6 +222,21 @@
                     💰 <span id="nav-points">{{ player.points if player else '' }}</span>
                 </span>
                 <a href="/leaderboard" class="btn btn-ghost" style="padding:6px 12px;font-size:0.8rem">🏆 ترتيب</a>
+
+                <!-- Friends -->
+                <a href="/friends" style="text-decoration:none;font-size:1.1rem;position:relative;padding:4px 6px" title="الأصدقاء">👥</a>
+
+                <!-- Notification Bell -->
+                <a href="/notifications" id="nav-bell" style="text-decoration:none;font-size:1.1rem;position:relative;padding:4px 6px" title="الإشعارات">
+                    🔔
+                    <span id="notif-badge" style="
+                        display:none;position:absolute;top:-4px;right:-2px;
+                        background:#ef4444;color:#fff;border-radius:50%;
+                        width:17px;height:17px;font-size:.6rem;font-weight:900;
+                        align-items:center;justify-content:center;
+                    "></span>
+                </a>
+
                 <a href="/logout" class="btn btn-ghost" style="padding:6px 12px;font-size:0.8rem;color:var(--red)">خروج 🚪</a>
             {% endif %}
         </div>
