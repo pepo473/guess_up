@@ -691,6 +691,23 @@ def admin_edit_points():
     db.session.commit()
     return jsonify({'ok': True, 'new_points': p.points, 'msg': msg})
 
+@app.route('/admin/run_migrate')
+def admin_run_migrate():
+    if session.get('admin_auth') != ADMIN_SECRET:
+        return jsonify({'error': 'مش مسموح'}), 403
+    try:
+        from migrate import run_migrations
+        run_migrations(os.path.join(app.instance_path, 'guess_up.db'))
+        # تأكيد إن الـ columns موجودة
+        import sqlite3
+        conn = sqlite3.connect(os.path.join(app.instance_path, 'guess_up.db'))
+        c = conn.execute("PRAGMA table_info(players)")
+        cols = [r[1] for r in c.fetchall()]
+        conn.close()
+        return jsonify({'ok': True, 'columns': cols})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/admin/logout')
 def admin_logout():
     session.pop('admin_auth', None)
@@ -707,25 +724,46 @@ def admin_delete_player(pid):
     if session.get('admin_auth') != ADMIN_SECRET:
         return jsonify({'error': 'مش مسموح'}), 403
     from datetime import datetime as _dt
+    import sqlite3 as _sq
     p = Player.query.filter_by(id=pid).first()
     if not p: return jsonify({'error': 'مش موجود'}), 404
-    p.is_deleted = True
-    p.deleted_at = _dt.utcnow()
-    # نعمل logout لو كان متصل
-    db.session.commit()
-    return jsonify({'ok': True, 'msg': f'تم حذف حساب {p.player_name}'})
+    name = p.player_name
+    try:
+        # حاول SQLAlchemy الأول
+        p.is_deleted = True
+        p.deleted_at = _dt.utcnow()
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    # raw SQL كـ backup مضمون
+    try:
+        conn = _sq.connect(os.path.join(app.instance_path, 'guess_up.db'))
+        now  = _dt.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+        conn.execute("UPDATE players SET is_deleted=1, deleted_at=? WHERE id=?", (now, pid))
+        conn.commit(); conn.close()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    return jsonify({'ok': True, 'msg': f'تم حذف حساب {name}'})
 
 
 @app.route('/admin/restore_player/<int:pid>', methods=['POST'])
 def admin_restore_player(pid):
     if session.get('admin_auth') != ADMIN_SECRET:
         return jsonify({'error': 'مش مسموح'}), 403
+    import sqlite3 as _sq
     p = Player.query.filter_by(id=pid).first()
     if not p: return jsonify({'error': 'مش موجود'}), 404
-    p.is_deleted = False
-    p.deleted_at = None
-    db.session.commit()
-    return jsonify({'ok': True, 'msg': f'تم استعادة حساب {p.player_name}'})
+    name = p.player_name
+    try:
+        p.is_deleted = False; p.deleted_at = None; db.session.commit()
+    except Exception: db.session.rollback()
+    try:
+        conn = _sq.connect(os.path.join(app.instance_path, 'guess_up.db'))
+        conn.execute("UPDATE players SET is_deleted=0, deleted_at=NULL WHERE id=?", (pid,))
+        conn.commit(); conn.close()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    return jsonify({'ok': True, 'msg': f'تم استعادة حساب {name}'})
 
 
 @app.route('/admin/ban_player/<int:pid>', methods=['POST'])
@@ -733,42 +771,54 @@ def admin_ban_player(pid):
     if session.get('admin_auth') != ADMIN_SECRET:
         return jsonify({'error': 'مش مسموح'}), 403
     from datetime import datetime as _dt, timedelta
+    import sqlite3 as _sq
     p = Player.query.filter_by(id=pid).first()
     if not p: return jsonify({'error': 'مش موجود'}), 404
-
+    name     = p.player_name
     reason   = request.form.get('reason', '').strip()
-    duration = request.form.get('duration', 'permanent')  # permanent / 1h / 24h / 7d / 30d
-
+    duration = request.form.get('duration', 'permanent')
     durations = {
-        '1h':        timedelta(hours=1),
-        '24h':       timedelta(hours=24),
-        '3d':        timedelta(days=3),
-        '7d':        timedelta(days=7),
-        '30d':       timedelta(days=30),
-        'permanent': None
+        '1h': timedelta(hours=1), '24h': timedelta(hours=24),
+        '3d': timedelta(days=3),  '7d':  timedelta(days=7),
+        '30d':timedelta(days=30), 'permanent': None
     }
+    ban_until = (_dt.utcnow() + durations[duration]) if duration != 'permanent' else None
+    until_str = ban_until.strftime('%Y/%m/%d %H:%M') if ban_until else 'دائم'
+    until_db  = ban_until.strftime('%Y-%m-%d %H:%M:%S') if ban_until else None
 
-    p.is_banned  = True
-    p.ban_reason = reason or None
-    p.ban_until  = (_dt.utcnow() + durations[duration]) if duration != 'permanent' else None
-    db.session.commit()
-
-    until_str = p.ban_until.strftime('%Y/%m/%d %H:%M') if p.ban_until else 'دائم'
-    return jsonify({'ok': True, 'msg': f'تم حظر {p.player_name} حتى {until_str}',
-                    'until': until_str})
+    try:
+        p.is_banned = True; p.ban_reason = reason or None; p.ban_until = ban_until
+        db.session.commit()
+    except Exception: db.session.rollback()
+    try:
+        conn = _sq.connect(os.path.join(app.instance_path, 'guess_up.db'))
+        conn.execute("UPDATE players SET is_banned=1, ban_until=?, ban_reason=? WHERE id=?",
+                     (until_db, reason or None, pid))
+        conn.commit(); conn.close()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    return jsonify({'ok': True, 'msg': f'تم حظر {name} حتى {until_str}', 'until': until_str})
 
 
 @app.route('/admin/unban_player/<int:pid>', methods=['POST'])
 def admin_unban_player(pid):
     if session.get('admin_auth') != ADMIN_SECRET:
         return jsonify({'error': 'مش مسموح'}), 403
+    import sqlite3 as _sq
     p = Player.query.filter_by(id=pid).first()
     if not p: return jsonify({'error': 'مش موجود'}), 404
-    p.is_banned  = False
-    p.ban_until  = None
-    p.ban_reason = None
-    db.session.commit()
-    return jsonify({'ok': True, 'msg': f'تم رفع الحظر عن {p.player_name}'})
+    name = p.player_name
+    try:
+        p.is_banned = False; p.ban_until = None; p.ban_reason = None
+        db.session.commit()
+    except Exception: db.session.rollback()
+    try:
+        conn = _sq.connect(os.path.join(app.instance_path, 'guess_up.db'))
+        conn.execute("UPDATE players SET is_banned=0, ban_until=NULL, ban_reason=NULL WHERE id=?", (pid,))
+        conn.commit(); conn.close()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    return jsonify({'ok': True, 'msg': f'تم رفع الحظر عن {name}'})
 
 # ════════════════════════════════════════════════════════
 # FRIENDS & NOTIFICATIONS ROUTES

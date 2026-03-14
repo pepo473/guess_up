@@ -300,8 +300,12 @@
         {% endif %}
     </div>
 
-    <div style="margin-top:20px">
+    <div style="margin-top:20px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
         <a href="/lobby" class="btn btn-ghost">← رجوع للعبة</a>
+        <button onclick="runMigrate()" class="btn-ban" style="padding:8px 16px;font-size:.85rem">
+            ⚙️ تحديث قاعدة البيانات
+        </button>
+        <span id="migrateStatus" style="color:var(--muted);font-size:.82rem"></span>
     </div>
 </div>
 {% endblock %}
@@ -425,5 +429,25 @@ async function unbanPlayer(pid, name) {
 document.getElementById('banModalOverlay').addEventListener('click', function(e){
     if(e.target === this) closeBanModal();
 });
+
+async function runMigrate() {
+    var s = document.getElementById('migrateStatus');
+    s.textContent = '⏳ جاري التحديث...';
+    try {
+        var res = await fetch('/admin/run_migrate');
+        var d   = await res.json();
+        if(d.ok) {
+            s.textContent = '✅ تم! الـ columns موجودة الآن';
+            s.style.color = '#6ee7b7';
+            adminToast('✅ قاعدة البيانات اتحدثت بنجاح!', true);
+            setTimeout(function(){ location.reload(); }, 1500);
+        } else {
+            s.textContent = '❌ ' + d.error;
+            s.style.color = '#fca5a5';
+        }
+    } catch(e) {
+        s.textContent = '❌ فشل الاتصال';
+    }
+}
 </script>
 {% endblock %}
