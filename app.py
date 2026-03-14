@@ -139,6 +139,19 @@ def login():
     name, pw = request.form.get('name','').strip(), request.form.get('password','')
     player, err = login_player(name, pw)
     if err: return render_template('index.html', error=err, tab='login', login_name=name)
+    # تحقق من الحظر والحذف
+    if player.is_deleted:
+        return render_template('index.html', error='❌ هذا الحساب تم حذفه', tab='login', login_name=name)
+    if player.ban_active:
+        from datetime import datetime as _dt
+        if player.ban_until:
+            until = player.ban_until.strftime('%Y/%m/%d %H:%M')
+            msg = f'🚫 حسابك محظور حتى {until}'
+        else:
+            msg = '🚫 حسابك محظور بشكل دائم'
+        if player.ban_reason:
+            msg += f' — السبب: {player.ban_reason}'
+        return render_template('index.html', error=msg, tab='login', login_name=name)
     session['player_id'] = player.id
     session['player_name'] = player.player_name
     return redirect(url_for('lobby'))
@@ -607,9 +620,12 @@ ADMIN_SECRET = 'guessup_admin_2024'   # ← غيّره لو حابب
 def admin_panel():
     if session.get('admin_auth') != ADMIN_SECRET:
         return redirect(url_for('admin_login'))
-    players = Player.query.order_by(Player.points.desc()).all()
-    hint    = ADMIN_SECRET[:4] + '****'
-    return render_template('admin.html', players=players, secret_hint=hint)
+    players  = Player.query.filter_by(is_deleted=False).order_by(Player.points.desc()).all()
+    deleted  = Player.query.filter_by(is_deleted=True).order_by(Player.deleted_at.desc()).all()
+    banned   = Player.query.filter_by(is_banned=True, is_deleted=False).all()
+    hint     = ADMIN_SECRET[:4] + '****'
+    return render_template('admin.html', players=players, deleted=deleted,
+                           banned=banned, secret_hint=hint)
 
 @app.route('/admin/login', methods=['GET','POST'])
 def admin_login():
@@ -672,6 +688,79 @@ def admin_logout():
     session.pop('admin_auth', None)
     return redirect(url_for('index'))
 
+
+
+# ════════════════════════════════════════════════════════
+# ADMIN — حذف وحظر الحسابات
+# ════════════════════════════════════════════════════════
+
+@app.route('/admin/delete_player/<int:pid>', methods=['POST'])
+def admin_delete_player(pid):
+    if session.get('admin_auth') != ADMIN_SECRET:
+        return jsonify({'error': 'مش مسموح'}), 403
+    from datetime import datetime as _dt
+    p = Player.query.filter_by(id=pid).first()
+    if not p: return jsonify({'error': 'مش موجود'}), 404
+    p.is_deleted = True
+    p.deleted_at = _dt.utcnow()
+    # نعمل logout لو كان متصل
+    db.session.commit()
+    return jsonify({'ok': True, 'msg': f'تم حذف حساب {p.player_name}'})
+
+
+@app.route('/admin/restore_player/<int:pid>', methods=['POST'])
+def admin_restore_player(pid):
+    if session.get('admin_auth') != ADMIN_SECRET:
+        return jsonify({'error': 'مش مسموح'}), 403
+    p = Player.query.filter_by(id=pid).first()
+    if not p: return jsonify({'error': 'مش موجود'}), 404
+    p.is_deleted = False
+    p.deleted_at = None
+    db.session.commit()
+    return jsonify({'ok': True, 'msg': f'تم استعادة حساب {p.player_name}'})
+
+
+@app.route('/admin/ban_player/<int:pid>', methods=['POST'])
+def admin_ban_player(pid):
+    if session.get('admin_auth') != ADMIN_SECRET:
+        return jsonify({'error': 'مش مسموح'}), 403
+    from datetime import datetime as _dt, timedelta
+    p = Player.query.filter_by(id=pid).first()
+    if not p: return jsonify({'error': 'مش موجود'}), 404
+
+    reason   = request.form.get('reason', '').strip()
+    duration = request.form.get('duration', 'permanent')  # permanent / 1h / 24h / 7d / 30d
+
+    durations = {
+        '1h':        timedelta(hours=1),
+        '24h':       timedelta(hours=24),
+        '3d':        timedelta(days=3),
+        '7d':        timedelta(days=7),
+        '30d':       timedelta(days=30),
+        'permanent': None
+    }
+
+    p.is_banned  = True
+    p.ban_reason = reason or None
+    p.ban_until  = (_dt.utcnow() + durations[duration]) if duration != 'permanent' else None
+    db.session.commit()
+
+    until_str = p.ban_until.strftime('%Y/%m/%d %H:%M') if p.ban_until else 'دائم'
+    return jsonify({'ok': True, 'msg': f'تم حظر {p.player_name} حتى {until_str}',
+                    'until': until_str})
+
+
+@app.route('/admin/unban_player/<int:pid>', methods=['POST'])
+def admin_unban_player(pid):
+    if session.get('admin_auth') != ADMIN_SECRET:
+        return jsonify({'error': 'مش مسموح'}), 403
+    p = Player.query.filter_by(id=pid).first()
+    if not p: return jsonify({'error': 'مش موجود'}), 404
+    p.is_banned  = False
+    p.ban_until  = None
+    p.ban_reason = None
+    db.session.commit()
+    return jsonify({'ok': True, 'msg': f'تم رفع الحظر عن {p.player_name}'})
 
 # ════════════════════════════════════════════════════════
 # FRIENDS & NOTIFICATIONS ROUTES

@@ -19,6 +19,21 @@ def run_migrations(db_path):
 
     # ── players ─────────────────────────────────────────────────────────────
     if 'players' in T:
+
+        pc = cols('players')
+        if 'is_deleted' not in pc:
+            c.execute("ALTER TABLE players ADD COLUMN is_deleted BOOLEAN DEFAULT 0")
+            print("[migrate] ✅ is_deleted column")
+        if 'deleted_at' not in pc:
+            c.execute("ALTER TABLE players ADD COLUMN deleted_at DATETIME")
+        if 'is_banned' not in pc:
+            c.execute("ALTER TABLE players ADD COLUMN is_banned BOOLEAN DEFAULT 0")
+            print("[migrate] ✅ is_banned column")
+        if 'ban_until' not in pc:
+            c.execute("ALTER TABLE players ADD COLUMN ban_until DATETIME")
+        if 'ban_reason' not in pc:
+            c.execute("ALTER TABLE players ADD COLUMN ban_reason VARCHAR(200)")
+
         pc = cols('players')
         if 'password_hash' not in pc:
             from werkzeug.security import generate_password_hash
