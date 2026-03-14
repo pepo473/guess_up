@@ -97,6 +97,32 @@
     <div class="profile-pts">💰 {{ target.points }} نقطة</div>
     <div class="profile-since">عضو منذ {{ target.created_at.strftime('%Y/%m/%d') }}</div>
 
+    <!-- أزرار التفاعل مع اللاعب -->
+    {% if not is_me %}
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap">
+        {% if friendship_status == 'accepted' %}
+            <a href="/chat/{{ target.id }}" class="btn btn-primary" style="padding:8px 20px">
+                💬 شات
+            </a>
+            <button onclick="removeFriendProfile({{ target.id }})" class="btn btn-ghost" style="padding:8px 16px;font-size:.85rem">
+                حذف صديق
+            </button>
+        {% elif friendship_status == 'pending_sent' %}
+            <span style="color:var(--muted);font-size:.88rem;padding:8px">⏳ تم إرسال طلب صداقة</span>
+            <button onclick="cancelRequest({{ target.id }})" class="btn btn-ghost" style="padding:8px 14px;font-size:.82rem">إلغاء</button>
+        {% elif friendship_status == 'pending_received' %}
+            <button onclick="acceptFriendProfile({{ target.id }})" class="btn btn-green" style="padding:8px 20px">
+                ✓ قبول طلب الصداقة
+            </button>
+            <button onclick="cancelRequest({{ target.id }})" class="btn btn-ghost" style="padding:8px 14px;font-size:.82rem">رفض</button>
+        {% else %}
+            <button onclick="addFriendProfile({{ target.id }}, this)" class="btn btn-primary" style="padding:8px 20px">
+                👥 إضافة صديق
+            </button>
+        {% endif %}
+    </div>
+    {% endif %}
+
     <!-- م1: Rank -->
     <div>
         <span class="rank-hero" data-rank-color="{{ r.color }}">
@@ -249,6 +275,28 @@ async function showReplay(matchId, btn) {
     }
     container.style.display = 'block';
     btn.textContent = '▲ إخفاء';
+}
+
+async function addFriendProfile(pid, btn) {
+    btn.disabled = true; btn.textContent = 'جاري...';
+    var res = await fetch('/friends/request/'+pid, {method:'POST'});
+    var d   = await res.json();
+    if(d.ok) { btn.textContent = '⏳ تم الإرسال'; btn.className = 'btn btn-ghost'; }
+    else { btn.disabled=false; btn.textContent='👥 إضافة صديق'; showToast('⚠️ '+d.error); }
+}
+async function acceptFriendProfile(pid) {
+    var res = await fetch('/friends/accept/'+pid, {method:'POST'});
+    var d   = await res.json();
+    if(d.ok) { showToast('✅ أصبحتم أصدقاء!'); setTimeout(function(){location.reload();},800); }
+}
+async function cancelRequest(pid) {
+    await fetch('/friends/reject/'+pid, {method:'POST'});
+    showToast('تم'); setTimeout(function(){location.reload();},600);
+}
+async function removeFriendProfile(pid) {
+    if(!confirm('تأكيد حذف الصديق؟')) return;
+    await fetch('/friends/remove/'+pid, {method:'POST'});
+    showToast('تم الحذف'); setTimeout(function(){location.reload();},600);
 }
 
 async function uploadAvatar(input) {

@@ -303,13 +303,32 @@ def profile(pid):
     target = get_player_by_id(pid)
     if not target: return redirect(url_for('leaderboard'))
     matches = get_player_matches(pid, 15)
+    # حالة الصداقة بين الزائر والـ target
+    me_id = session.get('player_id')
+    friendship_status = 'none'
+    if me_id and me_id != pid:
+        fr = Friendship.query.filter(
+            db.or_(
+                db.and_(Friendship.sender_id==me_id,  Friendship.receiver_id==pid),
+                db.and_(Friendship.sender_id==pid,    Friendship.receiver_id==me_id)
+            )
+        ).first()
+        if fr:
+            if fr.status == 'accepted':
+                friendship_status = 'accepted'
+            elif fr.status == 'pending' and fr.sender_id == me_id:
+                friendship_status = 'pending_sent'
+            elif fr.status == 'pending' and fr.receiver_id == me_id:
+                friendship_status = 'pending_received'
+
     return render_template('profile.html',
-        target       = target,
-        matches      = matches,
-        stats        = get_player_stats(pid),
-        achievements = get_player_achievements(pid),
-        title        = get_player_title(target),
-        is_me        = (session.get('player_id') == pid))
+        target            = target,
+        matches           = matches,
+        stats             = get_player_stats(pid),
+        achievements      = get_player_achievements(pid),
+        title             = get_player_title(target),
+        is_me             = (me_id == pid),
+        friendship_status = friendship_status)
 
 
 # م8: Match Replay API
