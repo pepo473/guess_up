@@ -281,25 +281,3 @@ class DailyChallengeEntry(db.Model):
     challenge = db.relationship('DailyChallenge', foreign_keys=[challenge_id])
     player    = db.relationship('Player',         foreign_keys=[player_id])
     __table_args__ = (db.UniqueConstraint('challenge_id','player_id'),)
-
-
-# ══════════════════════════════
-#  DAILY CHALLENGE
-# ══════════════════════════════
-class DailyChallenge(db.Model):
-    __tablename__ = 'daily_challenges'
-    id          = db.Column(db.Integer, primary_key=True)
-    date_str    = db.Column(db.String(10), unique=True, nullable=False)  # YYYY-MM-DD
-    secret      = db.Column(db.Integer,   nullable=False)
-    created_at  = db.Column(db.DateTime,  default=datetime.utcnow)
-
-class DailyChallengeEntry(db.Model):
-    __tablename__ = 'daily_entries'
-    id          = db.Column(db.Integer, primary_key=True)
-    player_id   = db.Column(db.Integer, db.ForeignKey('players.id'), nullable=False)
-    date_str    = db.Column(db.String(10), nullable=False)
-    guesses     = db.Column(db.Integer, default=0)
-    solved      = db.Column(db.Boolean, default=False)
-    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
-    player = db.relationship('Player', foreign_keys=[player_id])
-    __table_args__ = (db.UniqueConstraint('player_id','date_str'),)
