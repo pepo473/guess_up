@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, session, redirect, url_for, jsonify
 from flask_socketio import SocketIO, emit, join_room as sio_join_room
-from models import db, Player, Room, Punishment, Match, Friendship, Notification, ChatMessage
+from models import db, Player, Room, Punishment, Match, Friendship, Notification, ChatMessage, DailyChallenge, DailyChallengeEntry, GroupRoom, GroupRoomPlayer, DailyChallenge, DailyChallengeEntry
 from auth import register_player, login_player, get_player_by_id, is_logged_in
 from rooms import create_room, join_room, get_room
 from points import (transfer_points, award_bankrupt_mode_points, is_bankrupt, get_rank,
@@ -24,6 +24,26 @@ ALLOWED_EXT = {'png','jpg','jpeg','gif','webp'}
 db.init_app(app)
 socketio = SocketIO(app, cors_allowed_origins="*", manage_session=False)
 
+
+# ════════════════════════════════════════════════════════
+# DAILY CHALLENGE HELPERS
+# ════════════════════════════════════════════════════════
+
+def get_today_str():
+    from datetime import datetime as _dt
+    return _dt.utcnow().strftime('%Y-%m-%d')
+
+def get_or_create_daily():
+    """يجيب أو ينشئ تحدي اليوم"""
+    today = get_today_str()
+    ch = DailyChallenge.query.filter_by(date_str=today).first()
+    if not ch:
+        import random as _r
+        ch = DailyChallenge(date_str=today, secret=_r.randint(1,1000))
+        db.session.add(ch)
+        db.session.commit()
+    return ch
+
 @app.context_processor
 def inject_player():
     def get_player():
@@ -37,6 +57,8 @@ room_players     = {}   # room_code -> {player_id: name}
 room_guesses     = {}   # room_code -> {player_id: count}
 room_guess_logs  = {}   # room_code -> [entries]   م8
 room_spectators  = {}   # room_code -> {sid: name} م7
+room_timers      = {}   # room_code -> {player_id: remaining_seconds}  Speed mode
+group_scores     = {}   # room_code -> {player_id: guesses_count}      Group rooms
 sid_to_room      = {}
 sid_to_player    = {}
 player_status    = {}   # player_id -> 'online'/'in_game'/'waiting'  م5
@@ -217,17 +239,27 @@ def daily_reward():
 @app.route('/create_room', methods=['POST'])
 def create_room_route():
     if not is_logged_in(session): return jsonify({'error':'مش مسجل دخول'}), 401
-    bet       = int(request.form.get('bet_points', 100))
-    is_bm     = request.form.get('bankrupt_mode') == '1'
-    is_bot    = request.form.get('bot_game') == '1'
-    is_public = request.form.get('is_public') == '1'
+    bet         = int(request.form.get('bet_points', 100))
+    is_bm       = request.form.get('bankrupt_mode') == '1'
+    is_bot      = request.form.get('bot_game') == '1'
+    is_public   = request.form.get('is_public') == '1'
+    max_players = int(request.form.get('max_players', 2))
+    mode        = request.form.get('mode', 'classic')   # classic / speed
+    timer_secs  = 30 if mode == 'speed' else 0
 
     room, err = create_room(session['player_id'], bet, is_bm, is_bot)
     if err: return jsonify({'error': err}), 400
 
     # م6: Random Event لكل غرفة
-    room.random_event = roll_random_event()
+    room.random_event    = roll_random_event()
+    room.max_players     = max(2, min(6, max_players))
+    room.mode            = mode
+    room.timer_seconds   = timer_secs
     if is_public and not is_bot: room.is_public = True
+    # Group room: رقم سري واحد للكل
+    if room.max_players > 2:
+        import random as _r
+        room.group_secret = _r.randint(1, 1000)
     db.session.commit()
 
     if is_bot: create_bot_session(room.room_code)
@@ -523,24 +555,46 @@ def on_join(data):
 
     # ── لاعبين ────────────────────────────────────────────────────────────
     player_count = len(room_players[room_code])
+    max_p        = room.max_players or 2
+    is_group     = max_p > 2
+
     emit('player_joined', {
         'player_name': player_name, 'player_count': player_count,
-        'room_full': player_count >= 2
+        'room_full': player_count >= max_p,
+        'max_players': max_p, 'is_group': is_group
     }, room=room_code)
 
-    if player_count >= 2:
-        room_secrets.pop(room_code, None)
-        plist      = list(room_players[room_code].items())
+    if player_count >= max_p:
         event_info = EVENTS_MAP.get(room.random_event, {})
-        for s, p in sid_to_player.items():
-            if p in room_players.get(room_code, {}):
-                opp = next((n for i,n in plist if i != p), 'الخصم')
-                socketio.emit('room_ready', {
-                    'message':      '✅ اللاعبين جاهزين! اختار رقمك السري',
-                    'opponent_name': opp,
-                    'event':         room.random_event,
-                    'event_info':    event_info
-                }, to=s)
+
+        if is_group:
+            # ── Group Room: كل الناس بتخمن رقم واحد ──
+            room.status = 'playing'
+            db.session.commit()
+            group_scores[room_code] = {pid: 0 for pid in room_players[room_code]}
+            players_list = [{'id': pid, 'name': name}
+                           for pid, name in room_players[room_code].items()]
+            socketio.emit('group_game_started', {
+                'message':     f'🎮 اللعبة بدأت! {max_p} لاعبين',
+                'players':      players_list,
+                'timer':        room.timer_seconds,
+                'event':        room.random_event,
+                'event_info':   event_info,
+                'mode':         room.mode or 'classic'
+            }, room=room_code)
+        else:
+            # ── Classic 1v1 ──
+            room_secrets.pop(room_code, None)
+            plist = list(room_players[room_code].items())
+            for s, p in sid_to_player.items():
+                if p in room_players.get(room_code, {}):
+                    opp = next((n for i,n in plist if i != p), 'الخصم')
+                    socketio.emit('room_ready', {
+                        'message':      '✅ اللاعبين جاهزين! اختار رقمك السري',
+                        'opponent_name': opp,
+                        'event':         room.random_event,
+                        'event_info':    event_info
+                    }, to=s)
 
 
 @socketio.on('set_secret')
@@ -652,6 +706,89 @@ def on_guess(data):
             'guess_log': guess_log
         }, room=rc)
 
+
+
+
+@socketio.on('group_guess')
+def on_group_guess(data):
+    """تخمين في Group Room — كل الناس بتخمن رقم واحد"""
+    rc    = data.get('room_code')
+    guess = data.get('guess')
+    gid   = session.get('player_id')
+    gname = session.get('player_name')
+    if not rc or guess is None or not gid: return
+
+    room = get_room(rc)
+    if not room or room.status == 'done': return
+
+    secret = room.group_secret
+    if secret is None: return
+
+    # عدّ محاولات هذا اللاعب
+    if rc not in group_scores: group_scores[rc] = {}
+    group_scores[rc][gid] = group_scores[rc].get(gid, 0) + 1
+    total_g = group_scores[rc][gid]
+
+    g = int(guess)
+    if   g < secret: result = {'result':'higher','message':'⬆️ أعلى!','correct':False}
+    elif g > secret: result = {'result':'lower', 'message':'⬇️ أقل!', 'correct':False}
+    else:            result = {'result':'correct','message':'✅ صح!','correct':True}
+
+    # broadcast لكل الغرفة
+    socketio.emit('group_guess_result', {
+        'guesser':      gname,
+        'guesser_id':   gid,
+        'guess':        g,
+        'result':       result['result'],
+        'message':      result['message'],
+        'total_guesses':total_g
+    }, room=rc)
+
+    if result['correct']:
+        # الفائز بياخد نقاط من كل البقية
+        room.winner_id = gid
+        room.status    = 'done'
+        db.session.commit()
+
+        # تحويل النقاط
+        bet     = room.bet_points
+        players = list(room_players.get(rc, {}).items())
+        for pid, pname in players:
+            if pid != gid:
+                p = Player.query.get(pid)
+                if p and p.points >= bet:
+                    p.points -= bet
+        winner = Player.query.get(gid)
+        total_pot = bet * (len(players) - 1)
+        if winner:
+            winner.points += total_pot
+            winner.xp = (winner.xp or 0) + 30
+        db.session.commit()
+
+        # جيب scores النهائية
+        final_scores = []
+        for pid, pname in players:
+            final_scores.append({
+                'id': pid, 'name': pname,
+                'guesses': group_scores.get(rc,{}).get(pid, 0),
+                'won': pid == gid
+            })
+        final_scores.sort(key=lambda x: (0 if x['won'] else 1, x['guesses']))
+
+        socketio.emit('group_game_over', {
+            'winner_id':   gid,
+            'winner_name': gname,
+            'secret':      secret,
+            'total_guesses':total_g,
+            'pot':         total_pot,
+            'scores':      final_scores,
+            'winner_pts':  winner.points if winner else 0
+        }, room=rc)
+
+        # تنظيف
+        room_players.pop(rc, None)
+        room_guesses.pop(rc, None)
+        group_scores.pop(rc, None)
 
 # م5: Chat
 @socketio.on('chat_message')
@@ -904,6 +1041,62 @@ def admin_unban_player(pid):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     return jsonify({'ok': True, 'msg': f'تم رفع الحظر عن {name}'})
+
+
+# ════════════════════════════════════════════════════════
+# DAILY CHALLENGE ROUTES
+# ════════════════════════════════════════════════════════
+
+@app.route('/daily')
+def daily_challenge():
+    if not is_logged_in(session): return redirect(url_for('index'))
+    ch     = get_or_create_daily()
+    today  = get_today_str()
+    me     = session['player_id']
+    entry  = DailyChallengeEntry.query.filter_by(player_id=me, date_str=today).first()
+    # أفضل 10 لاعبين اليوم
+    leaders = (DailyChallengeEntry.query
+               .filter_by(date_str=today, solved=True)
+               .order_by(DailyChallengeEntry.guesses.asc())
+               .limit(10).all())
+    return render_template('daily.html',
+        challenge=ch, entry=entry, leaders=leaders, today=today)
+
+@app.route('/api/daily/guess', methods=['POST'])
+def daily_guess():
+    if not is_logged_in(session): return jsonify({'error':'مش مسجل'}), 401
+    guess  = int(request.form.get('guess', 0))
+    me     = session['player_id']
+    today  = get_today_str()
+    ch     = get_or_create_daily()
+
+    # جيب أو أنشئ الـ entry
+    entry = DailyChallengeEntry.query.filter_by(player_id=me, date_str=today).first()
+    if not entry:
+        entry = DailyChallengeEntry(player_id=me, date_str=today, guesses=0, solved=False)
+        db.session.add(entry)
+
+    if entry.solved:
+        return jsonify({'error':'حليت التحدي ده قبل كده!'}), 400
+
+    entry.guesses += 1
+    db.session.commit()
+
+    if guess == ch.secret:
+        entry.solved = True
+        # مكافأة نقاط حسب عدد المحاولات
+        bonus = max(10, 100 - (entry.guesses-1)*10)
+        p = Player.query.get(me)
+        if p:
+            p.points += bonus
+            p.xp = (p.xp or 0) + 20
+        db.session.commit()
+        return jsonify({'result':'correct','message':f'🎉 صح! في {entry.guesses} محاولة!',
+                       'guesses':entry.guesses,'bonus':bonus})
+    elif guess < ch.secret:
+        return jsonify({'result':'higher','message':'⬆️ أعلى من كده!','guesses':entry.guesses})
+    else:
+        return jsonify({'result':'lower', 'message':'⬇️ أقل من كده!', 'guesses':entry.guesses})
 
 # ════════════════════════════════════════════════════════
 # FRIENDS & NOTIFICATIONS ROUTES

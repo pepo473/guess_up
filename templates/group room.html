@@ -1,0 +1,436 @@
+{% extends 'base.html' %}
+{% block title %}غرفة جماعية {{ room.room_code }} — Guess Up{% endblock %}
+{% block extra_css %}
+<style>
+.grp-wrap { max-width:800px;margin:0 auto;padding:16px; }
+.grp-header {
+    background:var(--card);border-bottom:1px solid var(--border);
+    padding:12px 18px;display:flex;justify-content:space-between;
+    align-items:center;margin-bottom:16px;border-radius:14px;
+}
+.room-code-big { font-family:monospace;font-size:1.4rem;font-weight:900;
+    color:var(--accent2);letter-spacing:4px;cursor:pointer; }
+.bet-tag { background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);
+    border-radius:10px;padding:4px 14px;font-weight:700;font-size:.88rem; }
+
+/* Players Grid */
+.players-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+    gap:10px;margin-bottom:16px; }
+.player-tile {
+    background:var(--card);border:1px solid var(--border);
+    border-radius:14px;padding:14px;text-align:center;
+    transition:border-color .2s;position:relative;
+}
+.player-tile.turn-now  { border-color:var(--accent);box-shadow:0 0 12px rgba(124,58,237,.3); }
+.player-tile.is-target { border-color:var(--accent2);box-shadow:0 0 12px rgba(245,158,11,.25); }
+.player-tile.eliminated{ opacity:.4;filter:grayscale(1); }
+.pt-avatar { width:44px;height:44px;border-radius:50%;margin:0 auto 8px;
+    background:var(--surface);display:flex;align-items:center;justify-content:center;
+    font-size:1.2rem;border:2px solid var(--border); }
+.pt-name   { font-weight:700;font-size:.88rem;margin-bottom:3px; }
+.pt-pts    { font-size:.76rem;color:var(--muted); }
+.pt-badge  { position:absolute;top:8px;right:8px;font-size:.72rem;
+    padding:2px 6px;border-radius:6px;font-weight:700; }
+.badge-turn   { background:var(--accent);color:#fff; }
+.badge-target { background:var(--accent2);color:#000; }
+.badge-host   { background:rgba(16,185,129,.2);color:#6ee7b7;border:1px solid rgba(16,185,129,.3); }
+.badge-dead   { background:rgba(239,68,68,.15);color:#fca5a5; }
+
+/* Waiting room */
+.waiting-area { text-align:center;padding:32px 0; }
+.waiting-area .big-num { font-size:3.5rem;font-weight:900;color:var(--accent); }
+.progress-bar-wrap { background:var(--surface);border-radius:8px;height:8px;
+    overflow:hidden;margin:12px auto;max-width:240px; }
+.progress-bar-fill { height:100%;background:var(--accent);transition:width .4s; }
+
+/* Secret phase */
+.secret-area { background:var(--card);border:1px solid var(--border);
+    border-radius:14px;padding:20px;text-align:center;margin-bottom:16px; }
+.secret-area h2 { margin-bottom:8px; }
+.secret-input-row { display:flex;gap:8px;max-width:360px;margin:14px auto 0; }
+
+/* Game phase */
+.game-phase { }
+.turn-banner {
+    padding:12px 16px;border-radius:12px;text-align:center;
+    font-weight:700;margin-bottom:14px;font-size:.95rem;
+}
+.turn-mine { background:rgba(124,58,237,.2);color:#c4b5fd;border:1px solid rgba(124,58,237,.3); }
+.turn-other{ background:rgba(245,158,11,.1);color:#fcd34d;border:1px solid rgba(245,158,11,.2); }
+
+.target-selector { margin-bottom:14px; }
+.target-label { font-size:.8rem;font-weight:700;color:var(--muted);margin-bottom:8px; }
+.target-chips { display:flex;gap:6px;flex-wrap:wrap; }
+.target-chip {
+    padding:6px 14px;border-radius:10px;border:1px solid var(--border);
+    background:var(--card2);cursor:pointer;font-size:.85rem;font-weight:700;
+    transition:.15s;
+}
+.target-chip.active { background:var(--accent2);border-color:var(--accent2);color:#000; }
+.target-chip:hover:not(.active) { border-color:var(--accent); }
+.target-chip.dead { opacity:.3;cursor:not-allowed;pointer-events:none; }
+
+.guess-input-row { display:flex;gap:8px;margin-bottom:12px; }
+.guess-input-row input { font-size:1.1rem;text-align:center;letter-spacing:2px; }
+
+/* Log */
+.grp-log { background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;height:200px;overflow-y:auto;padding:10px;margin-bottom:12px; }
+.log-entry { padding:6px 10px;border-radius:8px;margin-bottom:5px;font-size:.86rem; }
+.log-correct { background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.25); }
+.log-miss    { background:rgba(100,116,139,.1);border:1px solid rgba(100,116,139,.2); }
+.log-system  { background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.2);color:#c4b5fd; }
+.log-elim    { background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#fca5a5; }
+
+/* Win overlay */
+.grp-win-overlay {
+    position:fixed;inset:0;background:rgba(0,0,0,.85);
+    display:flex;align-items:center;justify-content:center;z-index:500;
+}
+.grp-win-card {
+    background:var(--card);border:1px solid var(--border);
+    border-radius:22px;padding:36px;text-align:center;max-width:420px;width:92%;
+    animation:popIn .4s cubic-bezier(.175,.885,.32,1.275);
+}
+@keyframes popIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+</style>
+{% endblock %}
+
+{% block content %}
+{% set me_id = me.id %}
+
+<div class="grp-wrap">
+    <div class="grp-header">
+        <div>
+            <div style="color:var(--muted);font-size:.72rem;margin-bottom:2px">كود الغرفة</div>
+            <div class="room-code-big" onclick="copyCode()">{{ room.room_code }}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+            <span class="bet-tag">💰 {{ room.bet_points }}/لاعب</span>
+            <span class="bet-tag" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:var(--accent2)">
+                👥 {{ room.max_players }} لاعبين
+            </span>
+        </div>
+    </div>
+
+    <!-- Players Grid -->
+    <div class="players-grid" id="playersGrid">
+        {% for p in players %}
+        <div class="player-tile" id="ptile-{{ p.id }}">
+            {% if p.id == room.host_id %}
+                <span class="pt-badge badge-host">👑 هوست</span>
+            {% endif %}
+            <div class="pt-avatar">
+                {% if p.avatar %}
+                    <img src="/static/avatars/{{ p.avatar }}" style="width:44px;height:44px;border-radius:50%;object-fit:cover">
+                {% else %}👤{% endif %}
+            </div>
+            <div class="pt-name">{{ p.name }}</div>
+            <div class="pt-pts">{{ p.pts }} نقطة</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Waiting Phase -->
+    <div id="waitingPhase" {% if room.status != 'waiting' %}style="display:none"{% endif %}>
+        <div class="waiting-area">
+            <div class="big-num" id="playerCountNum">{{ players|length }}</div>
+            <div style="color:var(--muted);margin-bottom:10px">من {{ room.max_players }} لاعبين</div>
+            <div class="progress-bar-wrap">
+                <div class="progress-bar-fill" id="progressBar"
+                     style="width:{{ (players|length / room.max_players * 100)|int }}%"></div>
+            </div>
+            {% if me.id == room.host_id %}
+            <div style="margin-top:20px">
+                <button onclick="startGame()" class="btn btn-primary" id="startBtn">
+                    🚀 ابدأ اللعبة ({{ players|length }}/{{ room.max_players }})
+                </button>
+                <div style="color:var(--muted);font-size:.8rem;margin-top:8px">
+                    تقدر تبدأ من 3 لاعبين
+                </div>
+            </div>
+            {% else %}
+            <div style="color:var(--muted);margin-top:16px">
+                ⏳ استنى الهوست يبدأ اللعبة...
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Secret Phase -->
+    <div id="secretPhase" style="display:none">
+        <div class="secret-area">
+            <h2>🔒 اختار رقمك السري</h2>
+            <p style="color:var(--muted)">رقم بين 1 و 1000 — اللاعبين التانيين هيحاولوا يخمنوه</p>
+            <div class="secret-input-row">
+                <input type="number" id="secretInput" class="input"
+                       min="1" max="1000" placeholder="1 - 1000"
+                       style="text-align:center;font-size:1.2rem">
+                <button onclick="setSecret()" class="btn btn-primary" id="setSecretBtn">تأكيد ✓</button>
+            </div>
+            <div id="secretStatus" style="display:none;margin-top:10px;color:var(--green);font-weight:700"></div>
+        </div>
+    </div>
+
+    <!-- Game Phase -->
+    <div id="gamePhase" style="display:none">
+        <div id="turnBanner" class="turn-banner"></div>
+
+        <!-- Target selector — يظهر بس لصاحب الدور -->
+        <div id="targetSelector" class="target-selector" style="display:none">
+            <div class="target-label">اختار مين تخمن رقمه:</div>
+            <div class="target-chips" id="targetChips"></div>
+        </div>
+
+        <div id="myTurnInput" style="display:none">
+            <div class="guess-input-row">
+                <input type="number" id="guessInput" class="input"
+                       min="1" max="1000" placeholder="خمّن (1-1000)">
+                <button onclick="makeGuess()" class="btn btn-primary" id="guessBtn">خمّن 🎯</button>
+            </div>
+        </div>
+
+        <div class="grp-log" id="grpLog">
+            <div class="log-entry log-system">🎮 اللعبة بدأت — الكل اختار رقمه السري!</div>
+        </div>
+    </div>
+</div>
+
+<!-- Win Overlay -->
+<div id="winOverlay" class="grp-win-overlay" style="display:none">
+    <div class="grp-win-card">
+        <div style="font-size:4rem;margin-bottom:12px">🏆</div>
+        <h2 id="winTitle" style="font-size:1.5rem;font-weight:900;margin-bottom:8px"></h2>
+        <p id="winMsg" style="color:var(--muted);margin-bottom:20px"></p>
+        <button onclick="window.location.href='/lobby'" class="btn btn-primary" style="width:100%">
+            العودة للوبي
+        </button>
+    </div>
+</div>
+
+<!-- data -->
+<div id="grp-data"
+     data-room="{{ room.room_code }}"
+     data-me="{{ me.id }}"
+     data-me-name="{{ me.player_name }}"
+     data-host="{{ room.host_id }}"
+     data-max="{{ room.max_players }}"
+     style="display:none"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<script>
+var _d       = document.getElementById('grp-data').dataset;
+var ROOM     = _d.room;
+var ME_ID    = parseInt(_d.me);
+var ME_NAME  = _d.meName;
+var HOST_ID  = parseInt(_d.host);
+var MAX_P    = parseInt(_d.max);
+var myTurn   = false;
+var currTarget = null;
+var alivePlayers = {};  // id -> name
+
+function copyCode(){
+    navigator.clipboard.writeText(ROOM).then(function(){
+        showToast('✅ تم نسخ الكود!');
+    });
+}
+
+function addLog(msg, cls){
+    cls = cls || 'log-system';
+    var el = document.createElement('div');
+    el.className = 'log-entry ' + cls;
+    el.textContent = msg;
+    var log = document.getElementById('grpLog');
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+}
+
+function updateTurnBanner(turnId, targetId){
+    var banner = document.getElementById('turnBanner');
+    var tname  = alivePlayers[targetId] || '؟';
+    if(turnId === ME_ID){
+        myTurn = true;
+        currTarget = targetId;
+        banner.className  = 'turn-banner turn-mine';
+        banner.textContent = '🎯 دورك! خمّن رقم '+tname;
+        document.getElementById('myTurnInput').style.display = 'block';
+        document.getElementById('targetSelector').style.display = 'block';
+        // highlight
+        document.querySelectorAll('.player-tile').forEach(function(t){ t.classList.remove('turn-now','is-target'); });
+        var myTile = document.getElementById('ptile-'+ME_ID);
+        if(myTile) myTile.classList.add('turn-now');
+        var tTile = document.getElementById('ptile-'+targetId);
+        if(tTile) tTile.classList.add('is-target');
+        document.getElementById('guessInput').focus();
+        updateTargetChips(targetId);
+    } else {
+        myTurn = false;
+        var turnerName = alivePlayers[turnId] || '؟';
+        banner.className  = 'turn-banner turn-other';
+        banner.textContent = '⏳ دور '+turnerName+' — بيخمن رقم '+tname;
+        document.getElementById('myTurnInput').style.display = 'none';
+        document.getElementById('targetSelector').style.display = 'none';
+        document.querySelectorAll('.player-tile').forEach(function(t){ t.classList.remove('turn-now','is-target'); });
+        var turnTile = document.getElementById('ptile-'+turnId);
+        if(turnTile) turnTile.classList.add('turn-now');
+        var tTile2 = document.getElementById('ptile-'+targetId);
+        if(tTile2) tTile2.classList.add('is-target');
+    }
+}
+
+function updateTargetChips(currentTarget){
+    var chips = document.getElementById('targetChips');
+    chips.innerHTML = '';
+    Object.keys(alivePlayers).forEach(function(id){
+        if(parseInt(id) === ME_ID) return;
+        var btn = document.createElement('button');
+        btn.className = 'target-chip' + (parseInt(id)===currentTarget?' active':'');
+        btn.textContent = alivePlayers[id];
+        btn.onclick = function(){
+            socket.emit('grp_change_target', {room_code:ROOM, target_id:parseInt(id)});
+            document.querySelectorAll('.target-chip').forEach(function(c){c.classList.remove('active');});
+            btn.classList.add('active');
+            currTarget = parseInt(id);
+        };
+        chips.appendChild(btn);
+    });
+}
+
+// ── SOCKET ────────────────────────────────────────────────────────────────
+socket.emit('grp_join', {room_code: ROOM});
+
+socket.on('grp_player_list', function(data){
+    // تحديث عداد اللاعبين
+    var cnt = data.count;
+    var el  = document.getElementById('playerCountNum');
+    if(el) el.textContent = cnt;
+    var pb = document.getElementById('progressBar');
+    if(pb) pb.style.width = Math.min(100, cnt/MAX_P*100) + '%';
+    var sb = document.getElementById('startBtn');
+    if(sb) sb.textContent = '🚀 ابدأ اللعبة ('+cnt+'/'+MAX_P+')';
+
+    // update alive list
+    data.players.forEach(function(p){ alivePlayers[p.id] = p.name; });
+});
+
+socket.on('grp_set_secrets', function(data){
+    document.getElementById('waitingPhase').style.display = 'none';
+    document.getElementById('secretPhase').style.display  = 'block';
+    showToast(data.msg);
+});
+
+socket.on('grp_secret_confirmed', function(data){
+    document.getElementById('secretStatus').style.display = 'block';
+    document.getElementById('secretStatus').textContent   = data.msg;
+    document.getElementById('setSecretBtn').disabled = true;
+    document.getElementById('secretInput').disabled  = true;
+});
+
+socket.on('grp_game_started', function(data){
+    document.getElementById('secretPhase').style.display = 'none';
+    document.getElementById('gamePhase').style.display   = 'block';
+    // بني الـ alive map
+    data.players.forEach(function(p){ alivePlayers[p.id] = p.name; });
+    addLog('🎮 ' + data.msg, 'log-system');
+    updateTurnBanner(data.turn_player, data.target_player);
+});
+
+socket.on('grp_guess_result', function(data){
+    var cls = data.result==='correct' ? 'log-correct' : 'log-miss';
+    var icon = data.result==='correct'?'✅':data.result==='higher'?'⬆️':'⬇️';
+    addLog(icon+' '+data.guesser_name+' خمّن '+data.guess+
+           ' في رقم '+data.target_name+' — '+data.msg, cls);
+    if(data.result !== 'correct' && myTurn) {
+        // نفس الدور مازال — غيّر الـ target لو حبيت
+    }
+});
+
+socket.on('grp_player_eliminated', function(data){
+    addLog('💀 '+data.eliminated_name+' اتحذف! باقي '+data.alive_count+' لاعبين', 'log-elim');
+    var tile = document.getElementById('ptile-'+data.eliminated_id);
+    if(tile){
+        tile.classList.add('eliminated');
+        tile.classList.remove('turn-now','is-target');
+        var badge = document.createElement('span');
+        badge.className = 'pt-badge badge-dead';
+        badge.textContent = '💀';
+        tile.appendChild(badge);
+    }
+    delete alivePlayers[data.eliminated_id];
+    if(data.eliminated_id === ME_ID){
+        showToast('😢 اتحذفت! استنى تشوف الفايز...', 4000);
+        document.getElementById('myTurnInput').style.display = 'none';
+        document.getElementById('targetSelector').style.display = 'none';
+    }
+});
+
+socket.on('grp_next_turn', function(data){
+    // تحديث الـ alive list
+    var newAlive = {};
+    data.alive_players.forEach(function(p){
+        if(alivePlayers[p.id]) newAlive[p.id] = alivePlayers[p.id];
+    });
+    alivePlayers = newAlive;
+    updateTurnBanner(data.turn_player, data.target_player);
+});
+
+socket.on('grp_target_changed', function(data){
+    currTarget = data.target_id;
+    document.querySelectorAll('.target-chip').forEach(function(c){ c.classList.remove('active'); });
+    document.querySelectorAll('.player-tile').forEach(function(t){ t.classList.remove('is-target'); });
+    var tTile = document.getElementById('ptile-'+data.target_id);
+    if(tTile) tTile.classList.add('is-target');
+    updateTargetChips(data.target_id);
+});
+
+socket.on('grp_game_over', function(data){
+    // Confetti لو الفايز هو أنا
+    if(data.winner_id === ME_ID){
+        confetti({particleCount:200,spread:100,origin:{y:0.5},zIndex:600});
+    }
+    document.getElementById('winTitle').textContent = data.winner_id===ME_ID ?
+        '🏆 فزت!' : data.winner_name + ' فاز!';
+    document.getElementById('winMsg').textContent = data.msg;
+    document.getElementById('winOverlay').style.display = 'flex';
+});
+
+socket.on('grp_error', function(data){
+    showToast('⚠️ ' + data.msg);
+});
+
+// ── Actions ────────────────────────────────────────────────────────────────
+function startGame(){
+    socket.emit('grp_start', {room_code: ROOM});
+}
+
+function setSecret(){
+    var val = parseInt(document.getElementById('secretInput').value);
+    if(!val||val<1||val>1000){ showToast('⚠️ رقم بين 1 و 1000'); return; }
+    socket.emit('grp_set_secret', {room_code: ROOM, secret: val});
+    document.getElementById('setSecretBtn').disabled = true;
+    document.getElementById('secretInput').disabled  = true;
+    document.getElementById('secretStatus').textContent = '✅ تم! استنى الباقين...';
+    document.getElementById('secretStatus').style.display = 'block';
+}
+
+function makeGuess(){
+    if(!myTurn){ showToast('⚠️ مش دورك!'); return; }
+    var val = parseInt(document.getElementById('guessInput').value);
+    if(!val||val<1||val>1000){ showToast('⚠️ خمّن رقم بين 1 و 1000'); return; }
+    socket.emit('grp_guess', {room_code:ROOM, guess:val, target_id:currTarget});
+    document.getElementById('guessInput').value = '';
+    document.getElementById('guessInput').focus();
+}
+
+document.getElementById('guessInput') &&
+document.getElementById('guessInput').addEventListener('keydown', function(e){
+    if(e.key==='Enter') makeGuess();
+});
+document.getElementById('secretInput') &&
+document.getElementById('secretInput').addEventListener('keydown', function(e){
+    if(e.key==='Enter') setSecret();
+});
+</script>
+{% endblock %}

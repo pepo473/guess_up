@@ -291,6 +291,46 @@ input[type=checkbox] { accent-color:var(--accent);width:15px;height:15px; }
 </div>
 {% endblock %}
 
+<!-- Group Room Modal -->
+<div id="groupModal" class="modal-overlay hidden">
+    <div class="modal">
+        <h2>👥 غرفة جماعية</h2>
+        <div class="mform-group">
+            <label>عدد اللاعبين</label>
+            <div class="bet-chips" id="maxPlayerChips">
+                <button class="bet-chip" onclick="setMaxP(3,this)">3 لاعبين</button>
+                <button class="bet-chip active" onclick="setMaxP(4,this)">4 لاعبين</button>
+                <button class="bet-chip" onclick="setMaxP(5,this)">5 لاعبين</button>
+                <button class="bet-chip" onclick="setMaxP(6,this)">6 لاعبين</button>
+            </div>
+        </div>
+        <div class="mform-group">
+            <label>الرهان لكل لاعب</label>
+            <div class="bet-chips">
+                <button class="bet-chip active" onclick="setGrpBet(100,this)">100</button>
+                <button class="bet-chip" onclick="setGrpBet(200,this)">200</button>
+                <button class="bet-chip" onclick="setGrpBet(500,this)">500</button>
+            </div>
+            <input type="number" id="grpBetInput" class="input" value="100" min="50" style="margin-top:6px">
+        </div>
+        <div class="alert alert-info" style="font-size:.82rem">
+            🏆 الفايز بياخد رهانات كل اللاعبين!<br>
+            مثال: 4 لاعبين × 100 نقطة = الفايز يكسب 300 نقطة صافي
+        </div>
+        <div id="grpErr" class="alert alert-error hidden"></div>
+        <div style="margin-top:10px">
+            <label style="font-size:.82rem;color:var(--muted)">أو ادخل غرفة موجودة:</label>
+            <input type="text" id="grpJoinCode" class="input" placeholder="كود الغرفة"
+                   maxlength="6" style="text-align:center;letter-spacing:4px;text-transform:uppercase;margin-top:4px">
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px">
+            <button onclick="createGroupRoom()" class="btn btn-primary" style="flex:1">إنشاء 👥</button>
+            <button onclick="joinGroupRoom()"   class="btn btn-teal"    style="flex:1">دخول 🚪</button>
+            <button onclick="closeModal()"      class="btn btn-ghost">إلغاء</button>
+        </div>
+    </div>
+</div>
+
 {% block scripts %}
 <script>
 function setBet(v,el){
@@ -399,6 +439,42 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+var _maxP = 4, _grpBet = 100;
+function setMaxP(n, btn){
+    _maxP = n;
+    document.querySelectorAll('#maxPlayerChips .bet-chip').forEach(function(c){c.classList.remove('active');});
+    btn.classList.add('active');
+}
+function setGrpBet(v, btn){
+    _grpBet = v;
+    document.getElementById('grpBetInput').value = v;
+    document.querySelectorAll('.bet-chips .bet-chip').forEach(function(c){c.classList.remove('active');});
+    btn.classList.add('active');
+}
+function openGroupModal(){ document.getElementById('groupModal').classList.remove('hidden'); }
+
+async function createGroupRoom(){
+    var bet = document.getElementById('grpBetInput').value;
+    var err = document.getElementById('grpErr');
+    var f   = new FormData();
+    f.append('max_players', _maxP); f.append('bet_points', bet);
+    var res = await fetch('/create_group_room',{method:'POST',body:f});
+    var d   = await res.json();
+    if(d.error){ err.textContent=d.error; err.classList.remove('hidden'); return; }
+    window.location.href = '/group_room/'+d.room_code;
+}
+
+async function joinGroupRoom(){
+    var code = document.getElementById('grpJoinCode').value.trim().toUpperCase();
+    var err  = document.getElementById('grpErr');
+    if(!code){ err.textContent='اكتب كود الغرفة'; err.classList.remove('hidden'); return; }
+    var f = new FormData(); f.append('room_code', code);
+    var res = await fetch('/join_group_room',{method:'POST',body:f});
+    var d   = await res.json();
+    if(d.error){ err.textContent=d.error; err.classList.remove('hidden'); return; }
+    window.location.href = '/group_room/'+d.room_code;
+}
+
 async function startBotGame(){
     const form=new FormData(); form.append('bet_points',0); form.append('bot_game','1');
     const res=await fetch('/create_room',{method:'POST',body:form});
@@ -406,5 +482,37 @@ async function startBotGame(){
     if(d.error){alert(d.error);return;}
     window.location.href='/room/'+d.room_code;
 }
+
+var _groupCount = 3;
+var _groupBet   = 50;
+
+function openGroupModal() { document.getElementById('groupModal').classList.remove('hidden'); }
+
+function setPlayerCount(n, el){
+    _groupCount = n;
+    document.querySelectorAll('#playerCountChips .bet-chip').forEach(function(c){c.classList.remove('active');});
+    el.classList.add('active');
+}
+function setGroupBet(v, el){
+    _groupBet = v;
+    document.getElementById('groupBetInput').value = v;
+    document.querySelectorAll('.bet-chip').forEach(function(c){c.classList.remove('active');});
+    el.classList.add('active');
+}
+
+async function createGroupRoom(){
+    var bet = document.getElementById('groupBetInput').value || _groupBet;
+    var err = document.getElementById('groupErr');
+    var f   = new FormData();
+    f.append('bet_points',   bet);
+    f.append('max_players',  _groupCount);
+    f.append('is_public',    '1');
+    f.append('mode',         'classic');
+    var res = await fetch('/create_room',{method:'POST',body:f});
+    var d   = await res.json();
+    if(d.error){ err.textContent=d.error; err.classList.remove('hidden'); return; }
+    window.location.href = '/room/'+d.room_code;
+}
+
 </script>
 {% endblock %}

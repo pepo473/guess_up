@@ -68,6 +68,10 @@ class Room(db.Model):
     is_public        = db.Column(db.Boolean, default=False)
     status           = db.Column(db.String(20), default='waiting')
     random_event     = db.Column(db.String(50), nullable=True)  # م6: Random Event
+    max_players      = db.Column(db.Integer, default=2)          # Group rooms: 2-6
+    mode             = db.Column(db.String(20), default='classic') # classic/speed/daily
+    timer_seconds    = db.Column(db.Integer, default=0)           # Speed mode timer
+    group_secret     = db.Column(db.Integer, nullable=True)       # Group rooms: رقم واحد الكل يخمنه
     created_at       = db.Column(db.DateTime, default=datetime.utcnow)
 
     player1 = db.relationship('Player', foreign_keys=[player1_id])
@@ -216,3 +220,86 @@ class ChatMessage(db.Model):
 
     sender   = db.relationship('Player', foreign_keys=[sender_id])
     receiver = db.relationship('Player', foreign_keys=[receiver_id])
+
+
+# ══════════════════════════════
+#  GROUP ROOM  (غرف جماعية)
+# ══════════════════════════════
+class GroupRoom(db.Model):
+    __tablename__ = 'group_rooms'
+    id           = db.Column(db.Integer, primary_key=True)
+    room_code    = db.Column(db.String(10), unique=True, nullable=False)
+    host_id      = db.Column(db.Integer, db.ForeignKey('players.id'))
+    max_players  = db.Column(db.Integer, default=4)   # 3,4,5,6
+    bet_points   = db.Column(db.Integer, default=100)
+    status       = db.Column(db.String(20), default='waiting')
+    # waiting → secrets → playing → done
+    winner_id    = db.Column(db.Integer, db.ForeignKey('players.id'), nullable=True)
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+
+    host   = db.relationship('Player', foreign_keys=[host_id])
+    winner = db.relationship('Player', foreign_keys=[winner_id])
+
+
+class GroupRoomPlayer(db.Model):
+    __tablename__ = 'group_room_players'
+    id          = db.Column(db.Integer, primary_key=True)
+    room_id     = db.Column(db.Integer, db.ForeignKey('group_rooms.id'))
+    player_id   = db.Column(db.Integer, db.ForeignKey('players.id'))
+    secret      = db.Column(db.Integer, nullable=True)
+    is_alive    = db.Column(db.Boolean, default=True)  # لسه في اللعبة؟
+    guesses_used= db.Column(db.Integer, default=0)
+    joined_at   = db.Column(db.DateTime, default=datetime.utcnow)
+
+    room   = db.relationship('GroupRoom', foreign_keys=[room_id])
+    player = db.relationship('Player',    foreign_keys=[player_id])
+    __table_args__ = (db.UniqueConstraint('room_id','player_id'),)
+
+
+# ══════════════════════════════
+#  DAILY CHALLENGE
+# ══════════════════════════════
+class DailyChallenge(db.Model):
+    __tablename__ = 'daily_challenges'
+    id           = db.Column(db.Integer, primary_key=True)
+    date_str     = db.Column(db.String(10), unique=True)  # YYYY-MM-DD
+    target       = db.Column(db.Integer, nullable=False)   # الرقم السري اليومي
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class DailyChallengeEntry(db.Model):
+    __tablename__ = 'daily_challenge_entries'
+    id          = db.Column(db.Integer, primary_key=True)
+    challenge_id= db.Column(db.Integer, db.ForeignKey('daily_challenges.id'))
+    player_id   = db.Column(db.Integer, db.ForeignKey('players.id'))
+    guesses     = db.Column(db.Integer, default=0)
+    guess_log   = db.Column(db.Text, nullable=True)  # JSON
+    completed   = db.Column(db.Boolean, default=False)
+    time_secs   = db.Column(db.Integer, default=0)   # وقت الإنجاز
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+
+    challenge = db.relationship('DailyChallenge', foreign_keys=[challenge_id])
+    player    = db.relationship('Player',         foreign_keys=[player_id])
+    __table_args__ = (db.UniqueConstraint('challenge_id','player_id'),)
+
+
+# ══════════════════════════════
+#  DAILY CHALLENGE
+# ══════════════════════════════
+class DailyChallenge(db.Model):
+    __tablename__ = 'daily_challenges'
+    id          = db.Column(db.Integer, primary_key=True)
+    date_str    = db.Column(db.String(10), unique=True, nullable=False)  # YYYY-MM-DD
+    secret      = db.Column(db.Integer,   nullable=False)
+    created_at  = db.Column(db.DateTime,  default=datetime.utcnow)
+
+class DailyChallengeEntry(db.Model):
+    __tablename__ = 'daily_entries'
+    id          = db.Column(db.Integer, primary_key=True)
+    player_id   = db.Column(db.Integer, db.ForeignKey('players.id'), nullable=False)
+    date_str    = db.Column(db.String(10), nullable=False)
+    guesses     = db.Column(db.Integer, default=0)
+    solved      = db.Column(db.Boolean, default=False)
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+    player = db.relationship('Player', foreign_keys=[player_id])
+    __table_args__ = (db.UniqueConstraint('player_id','date_str'),)

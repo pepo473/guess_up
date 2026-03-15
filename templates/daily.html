@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% block title %}تحدي اليوم — Guess Up{% endblock %}
+{% block extra_css %}
+<style>
+.daily-wrap { max-width:600px;margin:0 auto;padding:20px 14px; }
+.daily-hero {
+    text-align:center;padding:32px 20px;
+    background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(245,158,11,.1));
+    border:1px solid rgba(124,58,237,.3);border-radius:20px;margin-bottom:20px;
+}
+.daily-hero .icon  { font-size:3rem;margin-bottom:10px; }
+.daily-hero h1     { font-size:1.4rem;font-weight:900;margin-bottom:6px; }
+.daily-hero .date  { color:var(--muted);font-size:.85rem; }
+.daily-hero .tries { font-size:1.1rem;font-weight:700;margin-top:10px;color:var(--accent2); }
+
+.guess-area { margin-bottom:20px; }
+.guess-row  { display:flex;gap:8px;margin-bottom:12px; }
+.guess-row input { flex:1;font-size:1.2rem;text-align:center;letter-spacing:3px; }
+.guess-row button { min-width:100px; }
+
+.guess-log {
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;padding:12px;min-height:80px;max-height:200px;overflow-y:auto;
+}
+.gl-entry {
+    padding:7px 10px;border-radius:8px;margin-bottom:5px;
+    font-size:.9rem;display:flex;align-items:center;gap:8px;
+}
+.gl-higher { background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.2); }
+.gl-lower  { background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.2); }
+.gl-correct{ background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3); }
+
+/* Solved state */
+.solved-card {
+    text-align:center;background:rgba(16,185,129,.1);
+    border:1px solid rgba(16,185,129,.3);border-radius:16px;padding:24px;
+    margin-bottom:20px;
+}
+.solved-card .big-icon { font-size:3rem;margin-bottom:10px; }
+
+/* Leaderboard */
+.lb-row {
+    display:flex;align-items:center;gap:10px;
+    padding:9px 12px;border-bottom:1px solid var(--border);
+}
+.lb-row:last-child { border:none; }
+.lb-num { width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.78rem; }
+.lb-1 { background:#f0b429;color:#000; }
+.lb-2 { background:#94a3b8;color:#000; }
+.lb-3 { background:#cd7f32;color:#fff; }
+.lb-n { background:var(--card2);color:var(--muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="daily-wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <h2 style="font-size:1.2rem;font-weight:900">🎯 تحدي اليوم</h2>
+        <a href="/lobby" class="btn btn-ghost btn-sm">← اللوبي</a>
+    </div>
+
+    <div class="daily-hero">
+        <div class="icon">🎯</div>
+        <h1>تحدي {{ today }}</h1>
+        <div class="date">رقم سري بين 1 و 1000 — نفسه لكل اللاعبين اليوم</div>
+        {% if entry %}
+        <div class="tries">🎲 محاولاتك: {{ entry.guesses }}</div>
+        {% endif %}
+    </div>
+
+    {% if entry and entry.solved %}
+    <!-- Solved -->
+    <div class="solved-card">
+        <div class="big-icon">🏆</div>
+        <h2 style="margin-bottom:6px">حليت التحدي!</h2>
+        <p style="color:var(--muted)">في <strong>{{ entry.guesses }} محاولة</strong></p>
+        <p style="color:var(--accent2);font-weight:700;margin-top:8px">
+            +{{ [10, 100 - (entry.guesses-1)*10]|max }} نقطة مكافأة
+        </p>
+    </div>
+    {% else %}
+    <!-- Guess Area -->
+    <div class="guess-area">
+        <div class="guess-row">
+            <input type="number" id="dailyGuess" class="input"
+                   min="1" max="1000" placeholder="1 - 1000">
+            <button onclick="submitGuess()" class="btn btn-primary" id="guessBtn">خمّن 🎯</button>
+        </div>
+        <div class="guess-log" id="guessLog">
+            <div style="text-align:center;color:var(--muted);font-size:.85rem;padding:16px">
+                ابدأ تخمّن! 🎲
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Leaderboard اليوم -->
+    {% if leaders %}
+    <div class="section-label" style="margin-top:16px">🏆 أفضل اللاعبين اليوم</div>
+    <div class="card" style="padding:0;overflow:hidden">
+        {% for e in leaders %}
+        <div class="lb-row">
+            <span class="lb-num lb-{% if loop.index<=3 %}{{ loop.index }}{% else %}n{% endif %}">
+                {{ loop.index }}
+            </span>
+            {% if e.player and e.player.avatar %}
+                <img src="/static/avatars/{{ e.player.avatar }}"
+                     style="width:26px;height:26px;border-radius:50%;object-fit:cover">
+            {% else %}
+                <span style="font-size:.9rem">👤</span>
+            {% endif %}
+            <span style="flex:1;font-weight:700">
+                <a href="/player/{{ e.player_id }}" style="text-decoration:none;color:var(--text)">
+                    {{ e.player.player_name if e.player else '؟' }}
+                </a>
+            </span>
+            <span style="color:var(--accent2);font-weight:700">{{ e.guesses }} محاولة</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var guessHistory = [];
+
+document.getElementById('dailyGuess') && document.getElementById('dailyGuess')
+    .addEventListener('keydown', function(e){ if(e.key==='Enter') submitGuess(); });
+
+async function submitGuess(){
+    var inp   = document.getElementById('dailyGuess');
+    var btn   = document.getElementById('guessBtn');
+    var guess = parseInt(inp.value);
+    if(!guess || guess<1 || guess>1000){ showToast('اكتب رقم بين 1 و 1000'); return; }
+
+    btn.disabled=true;
+    var f = new FormData(); f.append('guess', guess);
+    var res = await fetch('/api/daily/guess',{method:'POST',body:f});
+    var d   = await res.json();
+    btn.disabled=false;
+
+    if(d.error){ showToast('⚠️ '+d.error); return; }
+
+    // أضف للسجل
+    var log  = document.getElementById('guessLog');
+    var old  = log.querySelector('[style*="padding:16px"]');
+    if(old) old.remove();
+
+    var icons = {correct:'✅',higher:'⬆️',lower:'⬇️'};
+    var cls   = {correct:'gl-correct',higher:'gl-higher',lower:'gl-lower'};
+    var div   = document.createElement('div');
+    div.className = 'gl-entry '+cls[d.result];
+    div.innerHTML = `<span>${icons[d.result]}</span><span><strong>${guess}</strong> — ${d.message}</span>
+                     <span style="margin-right:auto;color:var(--muted);font-size:.78rem">#${d.guesses}</span>`;
+    log.prepend(div);
+
+    inp.value=''; inp.focus();
+
+    if(d.result==='correct'){
+        showToast('🎉 '+d.message+' +'+d.bonus+' نقطة!', 4000);
+        setTimeout(function(){location.reload();}, 2000);
+    }
+}
+</script>
+{% endblock %}
