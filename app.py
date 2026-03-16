@@ -1372,6 +1372,220 @@ def on_join_personal(data):
         sio_join_room(f'user_{pid}')
 
 # ══════════════════════════════════════════════════════════════════════════════
+
+# ════════════════════════════════════════════════════════
+# GROUP ROOMS ROUTES + SOCKETS
+# ════════════════════════════════════════════════════════
+
+grp_order   = {}
+grp_secrets = {}
+grp_turn    = {}
+grp_target  = {}
+
+
+def get_group_room(code):
+    from models import GroupRoom as _GR
+    return _GR.query.filter_by(room_code=code).first()
+
+
+@app.route('/create_group_room', methods=['POST'])
+def create_group_room():
+    if not is_logged_in(session): return jsonify({'error':'مش مسجل'}), 401
+    from models import GroupRoom as _GR, GroupRoomPlayer as _GRP
+    from datetime import datetime as _dt
+    import random as _r, string as _s
+    max_p = int(request.form.get('max_players', 4))
+    bet   = int(request.form.get('bet_points', 100))
+    pid   = session['player_id']
+    if max_p not in [3,4,5,6]: return jsonify({'error':'عدد اللاعبين لازم 3-6'}), 400
+    p = get_player_by_id(pid)
+    if not p or p.points < bet: return jsonify({'error':f'محتاج {bet} نقطة'}), 400
+    while True:
+        code = ''.join(_r.choices(_s.ascii_uppercase+_s.digits, k=6))
+        if not _GR.query.filter_by(room_code=code).first(): break
+    room = _GR(room_code=code, host_id=pid, max_players=max_p,
+               bet_points=bet, status='waiting', created_at=_dt.utcnow())
+    db.session.add(room); db.session.flush()
+    db.session.add(_GRP(room_id=room.id, player_id=pid, joined_at=_dt.utcnow()))
+    db.session.commit()
+    return jsonify({'ok':True, 'room_code':code})
+
+
+@app.route('/join_group_room', methods=['POST'])
+def join_group_room():
+    if not is_logged_in(session): return jsonify({'error':'مش مسجل'}), 401
+    from models import GroupRoom as _GR, GroupRoomPlayer as _GRP
+    from datetime import datetime as _dt
+    code = request.form.get('room_code','').strip().upper()
+    pid  = session['player_id']
+    room = _GR.query.filter_by(room_code=code).first()
+    if not room: return jsonify({'error':'الغرفة مش موجودة'}), 404
+    if room.status != 'waiting': return jsonify({'error':'اللعبة بدأت'}), 400
+    if _GRP.query.filter_by(room_id=room.id, player_id=pid).first():
+        return jsonify({'ok':True, 'room_code':code})
+    if _GRP.query.filter_by(room_id=room.id).count() >= room.max_players:
+        return jsonify({'error':'الغرفة ممتلئة'}), 400
+    p = get_player_by_id(pid)
+    if not p or p.points < room.bet_points: return jsonify({'error':f'محتاج {room.bet_points} نقطة'}), 400
+    db.session.add(_GRP(room_id=room.id, player_id=pid, joined_at=_dt.utcnow()))
+    db.session.commit()
+    return jsonify({'ok':True, 'room_code':code})
+
+
+@app.route('/group_room/<room_code>')
+def group_room_page(room_code):
+    if not is_logged_in(session): return redirect(url_for('index'))
+    from models import GroupRoom as _GR, GroupRoomPlayer as _GRP
+    room = _GR.query.filter_by(room_code=room_code).first()
+    if not room: return redirect(url_for('lobby'))
+    me = get_player_by_id(session['player_id'])
+    entries = _GRP.query.filter_by(room_id=room.id).all()
+    players = []
+    for e in entries:
+        p2 = get_player_by_id(e.player_id)
+        if p2: players.append({'id':p2.id,'name':p2.player_name,'pts':p2.points,'avatar':p2.avatar})
+    is_member = any(e.player_id == me.id for e in entries)
+    return render_template('group_room.html', room=room, me=me,
+                           players=players, is_member=is_member)
+
+
+@socketio.on('grp_join')
+def on_grp_join(data):
+    from models import GroupRoom as _GR, GroupRoomPlayer as _GRP
+    code = data.get('room_code'); pid = session.get('player_id')
+    if not code or not pid: return
+    sio_join_room(code)
+    sid_to_room[request.sid] = code; sid_to_player[request.sid] = pid
+    room = _GR.query.filter_by(room_code=code).first()
+    if not room: return
+    entries = _GRP.query.filter_by(room_id=room.id).all()
+    players = []
+    for e in entries:
+        p2 = get_player_by_id(e.player_id)
+        if p2: players.append({'id':p2.id,'name':p2.player_name,'pts':p2.points})
+    socketio.emit('grp_player_list',{
+        'players':players,'count':len(entries),
+        'max':room.max_players,'status':room.status,'host_id':room.host_id
+    }, room=code)
+
+
+@socketio.on('grp_start')
+def on_grp_start(data):
+    from models import GroupRoom as _GR, GroupRoomPlayer as _GRP
+    code = data.get('room_code'); pid = session.get('player_id')
+    room = _GR.query.filter_by(room_code=code).first()
+    if not room or room.host_id != pid: return
+    if _GRP.query.filter_by(room_id=room.id).count() < 3:
+        emit('grp_error',{'msg':'محتاج 3 لاعبين على الأقل!'}); return
+    room.status = 'secrets'; db.session.commit()
+    socketio.emit('grp_set_secrets',{'msg':'🔒 اختار رقمك السري!'}, room=code)
+
+
+@socketio.on('grp_set_secret')
+def on_grp_set_secret(data):
+    from models import GroupRoom as _GR, GroupRoomPlayer as _GRP
+    code=data.get('room_code'); secret=int(data.get('secret',0)); pid=session.get('player_id')
+    room=_GR.query.filter_by(room_code=code).first()
+    if not room or room.status!='secrets' or not 1<=secret<=1000: return
+    entry=_GRP.query.filter_by(room_id=room.id,player_id=pid).first()
+    if not entry: return
+    entry.secret=secret; db.session.commit()
+    all_e=_GRP.query.filter_by(room_id=room.id).all()
+    done=[e for e in all_e if e.secret is not None]
+    if len(done)<len(all_e):
+        emit('grp_secret_confirmed',{'msg':f'✅ تم! ({len(done)}/{len(all_e)})'}, to=request.sid); return
+    room.status='playing'; db.session.commit()
+    pids=[e.player_id for e in all_e]
+    grp_order[code]=pids; grp_secrets[code]={e.player_id:e.secret for e in all_e}
+    grp_turn[code]=pids[0]
+    others=[p for p in pids if p!=pids[0]]
+    grp_target[code]=others[0] if others else pids[0]
+    pinfo=[{'id':get_player_by_id(e.player_id).id,'name':get_player_by_id(e.player_id).player_name}
+           for e in all_e if get_player_by_id(e.player_id)]
+    socketio.emit('grp_game_started',{
+        'players':pinfo,'turn_player':pids[0],'target_player':grp_target[code],'msg':'🎮 اللعبة بدأت!'
+    }, room=code)
+
+
+@socketio.on('grp_guess')
+def on_grp_guess(data):
+    from models import GroupRoom as _GR, GroupRoomPlayer as _GRP
+    code=data.get('room_code'); guess=int(data.get('guess',0))
+    pid=session.get('player_id'); pname=session.get('player_name','؟')
+    room=_GR.query.filter_by(room_code=code).first()
+    if not room or room.status!='playing': return
+    if grp_turn.get(code)!=pid: emit('grp_error',{'msg':'مش دورك!'}); return
+    target_id=grp_target.get(code)
+    if not target_id: return
+    secret=grp_secrets.get(code,{}).get(target_id)
+    if secret is None: return
+    tp=get_player_by_id(target_id)
+    tname=tp.player_name if tp else '؟'
+    eg=_GRP.query.filter_by(room_id=room.id,player_id=pid).first()
+    if eg: eg.guesses_used=(eg.guesses_used or 0)+1; db.session.commit()
+    if guess<secret: res='higher'; msg=f'⬆️ رقم {tname} أعلى!'
+    elif guess>secret: res='lower'; msg=f'⬇️ رقم {tname} أقل!'
+    else: res='correct'; msg=f'✅ رقم {tname} هو {secret}!'
+    socketio.emit('grp_guess_result',{
+        'guesser_id':pid,'guesser_name':pname,'target_id':target_id,
+        'target_name':tname,'guess':guess,'result':res,'msg':msg
+    }, room=code)
+    if res!='correct': return
+    dead=_GRP.query.filter_by(room_id=room.id,player_id=target_id).first()
+    if dead: dead.is_alive=False; db.session.commit()
+    alive=_GRP.query.filter_by(room_id=room.id,is_alive=True).all()
+    socketio.emit('grp_player_eliminated',{
+        'eliminated_id':target_id,'eliminated_name':tname,'alive_count':len(alive)
+    }, room=code)
+    if len(alive)==1:
+        wid=alive[0].player_id; wp=get_player_by_id(wid)
+        room.status='done'; room.winner_id=wid; db.session.commit()
+        all_e=_GRP.query.filter_by(room_id=room.id).all()
+        prize=room.bet_points*(len(all_e)-1)
+        for e in all_e:
+            lp=get_player_by_id(e.player_id)
+            if not lp: continue
+            if e.player_id==wid: lp.points+=prize
+            else: lp.points=max(0,lp.points-room.bet_points)
+            lp.xp=(lp.xp or 0)+(30 if e.player_id==wid else 10)
+        db.session.commit()
+        grp_secrets.pop(code,None);grp_turn.pop(code,None)
+        grp_target.pop(code,None);grp_order.pop(code,None)
+        socketio.emit('grp_game_over',{
+            'winner_id':wid,'winner_name':wp.player_name if wp else '؟',
+            'prize':prize,'msg':f'🏆 {wp.player_name if wp else "؟"} فاز وكسب {prize} نقطة!'
+        }, room=code)
+        return
+    alive_ids=[e.player_id for e in alive]
+    order=grp_order.get(code,alive_ids)
+    ao=[p for p in order if p in alive_ids]
+    if not ao: ao=alive_ids
+    try: ci=ao.index(pid)
+    except: ci=0
+    ng=ao[(ci+1)%len(ao)]
+    nt_list=[p for p in ao if p!=ng]
+    nt=nt_list[0] if nt_list else ao[0]
+    grp_turn[code]=ng; grp_target[code]=nt
+    socketio.emit('grp_next_turn',{
+        'turn_player':ng,'target_player':nt,
+        'alive_players':[{'id':p} for p in alive_ids]
+    }, room=code)
+
+
+@socketio.on('grp_change_target')
+def on_grp_change_target(data):
+    from models import GroupRoom as _GR, GroupRoomPlayer as _GRP
+    code=data.get('room_code'); target_id=int(data.get('target_id',0))
+    pid=session.get('player_id')
+    if grp_turn.get(code)!=pid: return
+    room=_GR.query.filter_by(room_code=code).first()
+    if not room: return
+    t=_GRP.query.filter_by(room_id=room.id,player_id=target_id,is_alive=True).first()
+    if t and target_id!=pid:
+        grp_target[code]=target_id
+        socketio.emit('grp_target_changed',{'target_id':target_id}, room=code)
+
+
 with app.app_context():
     from migrate import run_migrations
     run_migrations(os.path.join(app.instance_path, 'guess_up.db'))
