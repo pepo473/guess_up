@@ -75,6 +75,28 @@
 .turn-mine { background:rgba(124,58,237,.2);color:#c4b5fd; }
 .turn-opp  { background:rgba(245,158,11,.12);color:#fcd34d; }
 
+/* Timer */
+.timer-wrap {
+    display:none;
+    align-items:center;justify-content:center;gap:10px;
+    margin-bottom:10px;
+}
+.timer-wrap.visible { display:flex; }
+.timer-circle {
+    width:54px;height:54px;border-radius:50%;
+    border:4px solid var(--border);
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.2rem;font-weight:900;position:relative;
+    transition:border-color .3s;
+}
+.timer-circle.urgent { border-color:#ef4444;color:#ef4444;animation:pulse .5s infinite; }
+.timer-circle.warning{ border-color:#f59e0b;color:#f59e0b; }
+.timer-circle.ok     { border-color:#10b981;color:#10b981; }
+.mode-badge {
+    background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.3);
+    border-radius:10px;padding:4px 12px;font-size:.8rem;font-weight:700;color:#c4b5fd;
+}
+
 /* opponent typing */
 .opponent-typing {
     display:none;align-items:center;gap:8px;
@@ -258,6 +280,19 @@
     <!-- م7: Spectators -->
     <div id="spectatorsBar" class="spectators-bar hidden">👁 <span id="specCount">0</span> متفرج</div>
 
+    <!-- Group Room Players (يظهر في الغرف الجماعية فقط) -->
+    <div id="groupPlayersArea" style="display:none">
+        <div class="section-label">🏟️ اللاعبين</div>
+        <div class="group-players" id="groupPlayersList"></div>
+        <!-- Speed Timer -->
+        <div id="speedTimerWrap" style="display:none">
+            <div class="timer-text" id="timerText">30</div>
+            <div class="timer-bar-wrap">
+                <div class="timer-bar-fill" id="timerBar" style="width:100%"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Waiting -->
     <div id="waitingState" class="waiting-state {% if room.is_bot_game %}hidden{% endif %}">
         <div class="big-icon">⏳</div>
@@ -295,6 +330,17 @@
             <div class="player-tag">
                 <div class="name" id="opponentName">{% if room.is_bot_game %}🤖 الكمبيوتر{% else %}الخصم{% endif %}</div>
                 <div class="pts" id="oppPoints"></div>
+            </div>
+        </div>
+
+        <!-- Timer للـ Speed Mode -->
+        <div class="timer-wrap" id="timerWrap">
+            <div class="timer-circle ok" id="timerCircle">
+                <span id="timerNum">--</span>
+            </div>
+            <div>
+                <div class="mode-badge" id="modeBadge"></div>
+                <div style="font-size:.75rem;color:var(--muted);margin-top:3px" id="timerLabel"></div>
             </div>
         </div>
 
@@ -348,6 +394,17 @@
         <p style="color:var(--muted);font-size:.85rem;margin-bottom:20px" id="evPopupEffect"></p>
         <button onclick="document.getElementById('eventPopup').classList.add('hidden')"
                 class="btn btn-primary" style="width:100%">فاهم! هنلعب 🎮</button>
+    </div>
+</div>
+
+<!-- Group Game Over -->
+<div id="groupOverOverlay" class="game-over-overlay hidden" style="z-index:510">
+    <div class="game-over-card" style="max-width:480px">
+        <div class="result-icon" id="groupResultIcon">🏆</div>
+        <h2 id="groupResultTitle">انتهت المباراة!</h2>
+        <p id="groupResultMsg" style="color:var(--muted);margin-bottom:16px"></p>
+        <div id="groupScoresList" style="margin-bottom:16px"></div>
+        <button onclick="goLobby()" class="btn btn-ghost" style="width:100%">العودة للوبي</button>
     </div>
 </div>
 
@@ -456,6 +513,9 @@ function showEventPopup(eventKey) {
 // ── state ─────────────────────────────────────────────────────────────────────
 let myTurn         = false;
 let gameOver       = false;
+let timerInterval  = null;
+let timerSeconds   = 0;
+let roomMode       = 'classic';
 let iAmWinner      = false;
 let isSpectator    = false;
 let punishmentSent = false;
@@ -469,6 +529,62 @@ const hide = id => el(id) && el(id).classList.add('hidden');
 
 function playSound(name){
     try{ el('snd-'+name).currentTime=0; el('snd-'+name).play(); }catch(e){}
+}
+
+// ── Speed Mode Timer ──────────────────────────────────────────
+function startTimer(seconds, onTimeout){
+    stopTimer();
+    timerSeconds = seconds;
+    var circle = el('timerCircle');
+    var numEl  = el('timerNum');
+    var wrap   = el('timerWrap');
+    if(!circle || !numEl) return;
+
+    wrap.classList.add('visible');
+    updateTimerDisplay(seconds);
+
+    timerInterval = setInterval(function(){
+        timerSeconds--;
+        updateTimerDisplay(timerSeconds);
+        if(timerSeconds <= 0){
+            stopTimer();
+            if(onTimeout) onTimeout();
+        }
+    }, 1000);
+}
+
+function stopTimer(){
+    if(timerInterval){ clearInterval(timerInterval); timerInterval=null; }
+    var wrap = el('timerWrap');
+    if(wrap) wrap.classList.remove('visible');
+}
+
+function updateTimerDisplay(secs){
+    var numEl  = el('timerNum');
+    var circle = el('timerCircle');
+    if(!numEl || !circle) return;
+    numEl.textContent = secs;
+    circle.className = 'timer-circle ';
+    if(secs <= 5)       circle.className += 'urgent';
+    else if(secs <= 10) circle.className += 'warning';
+    else                circle.className += 'ok';
+}
+
+function showModeBadge(mode){
+    var badge = el('modeBadge');
+    var label = el('timerLabel');
+    if(!badge) return;
+    var names = {
+        'speed_20': '⚡ سريع 20 ثانية',
+        'speed_10': '🔥 سريع 10 ثانية',
+        'double':   '💎 ضعف النقاط',
+        'classic':  ''
+    };
+    badge.textContent = names[mode] || '';
+    if(label){
+        var bonuses = { 'speed_20':'+20 نقطة للفايز','speed_10':'+50 نقطة للفايز','double':'الرهان × 2' };
+        label.textContent = bonuses[mode] || '';
+    }
 }
 
 function showToast(msg, dur=2800){
@@ -507,12 +623,25 @@ function setTurn(mine){
         el('guessInput').disabled = false;
         el('guessInput').focus();
         el('opponentTyping').classList.remove('visible');
+        // شغّل التايمر لو speed mode
+        if(timerSeconds > 0){
+            var secs = timerSeconds;
+            startTimer(secs, function(){
+                // وقت انتهى — بعت guess فاضي عشان السيرفر يحسبه خسارة
+                if(!gameOver && myTurn){
+                    showToast('⏰ انتهى الوقت!');
+                    el('guessBtn').disabled = true;
+                    el('guessInput').disabled = true;
+                }
+            });
+        }
     } else {
         ti.textContent = '⏳ دور الخصم...';
         ti.classList.add('turn-opp');
         el('guessBtn').disabled   = true;
         el('guessInput').disabled = true;
         el('opponentTyping').classList.add('visible');
+        stopTimer();
     }
 }
 
@@ -615,8 +744,10 @@ socket.on('room_ready', (data)=>{
         el('opponentName').textContent = data.opponent_name;
         el('typingText').textContent   = data.opponent_name + ' بيخمن...';
     }
-    // م6: Popup إجباري للـ event
     if(data.event){ showEventPopup(data.event); }
+    // حفظ المود والتايمر
+    if(data.timer_seconds){ timerSeconds = data.timer_seconds; }
+    if(data.mode){ roomMode = data.mode; showModeBadge(data.mode); }
     playSound('start');
 });
 
@@ -628,6 +759,8 @@ socket.on('game_started', (data)=>{
         el('opponentName').textContent = data.opponent_name;
         el('typingText').textContent   = data.opponent_name + ' بيخمن...';
     }
+    if(data.timer_seconds){ timerSeconds = data.timer_seconds; }
+    if(data.mode){ roomMode = data.mode; showModeBadge(data.mode); }
     playSound('start');
     addLog('النظام', data.message, '🎮', 'system');
     setTurn(IS_BOT || PLAYER_ID === PLAYER1_ID);
@@ -667,6 +800,7 @@ socket.on('error_msg', (data)=>{ showToast('⚠️ '+data.message); });
 
 socket.on('game_over', (data)=>{
     gameOver = true;
+    stopTimer();
     el('guessBtn') && (el('guessBtn').disabled=true);
     el('guessInput') && (el('guessInput').disabled=true);
     hide('turnIndicator');
@@ -718,6 +852,8 @@ socket.on('game_over', (data)=>{
             bonusRow.innerHTML += `<span class="bonus-chip">+${data.streak_bonus} streak bonus</span>`;
         if(data.event_bonus > 0)
             bonusRow.innerHTML += `<span class="bonus-chip">+${data.event_bonus} event bonus</span>`;
+        if(data.mode_bonus > 0)
+            bonusRow.innerHTML += `<span class="bonus-chip" style="background:rgba(99,102,241,.2);color:#a5b4fc">⚡ +${data.mode_bonus} mode bonus</span>`;
         if(data.xp_gained)
             bonusRow.innerHTML += `<span class="bonus-chip">+${data.xp_gained} XP</span>`;
     }
@@ -828,6 +964,129 @@ async function sendPunishment(){
         showToast('⚠️ '+(json.error||'حصل خطأ'));
     }
 }
+
+// ── GROUP ROOM EVENTS ─────────────────────────────────────────
+var IS_GROUP    = false;
+var GROUP_TIMER = null;
+
+socket.on('group_game_started', function(data){
+    hideLoading();
+    hide('waitingState'); hide('secretPhase');
+    show('gamePhase');
+    IS_GROUP = true;
+
+    // اعرض اللاعبين
+    document.getElementById('groupPlayersArea').style.display = 'block';
+    var list = document.getElementById('groupPlayersList');
+    list.innerHTML = '';
+    data.players.forEach(function(p){
+        var card = document.createElement('div');
+        card.className = 'gp-card';
+        card.id = 'gp-'+p.id;
+        card.innerHTML = '<span>'+(p.id === PLAYER_ID ? '👤 أنت' : p.name)+'</span>'
+                       + '<span class="gp-guesses" id="gpc-'+p.id+'">0 محاولة</span>';
+        list.appendChild(card);
+    });
+
+    // Speed Timer
+    if(data.timer && data.timer > 0){
+        document.getElementById('speedTimerWrap').style.display = 'block';
+        startSpeedTimer(data.timer);
+    }
+
+    addLog('النظام', data.message, '🏟️', 'system');
+    setTurn(true);  // الكل يخمن في نفس الوقت
+    el('guessBtn').disabled   = false;
+    el('guessInput').disabled = false;
+    el('guessInput').placeholder = 'خمّن الرقم السري (1-1000)';
+    playSound('start');
+});
+
+socket.on('group_guess_result', function(data){
+    var isMe = data.guesser_id === PLAYER_ID;
+    var icon = data.result==='correct'?'✅':(data.result==='higher'?'⬆️':'⬇️');
+    var cls  = data.result==='correct'?'correct':(isMe?'my-guess':'opp-guess');
+    addLog(data.guesser, data.guess+' — '+data.message, icon, cls);
+
+    // تحديث عداد المحاولات
+    var ctr = document.getElementById('gpc-'+data.guesser_id);
+    if(ctr) ctr.textContent = data.total_guesses+' محاولة';
+
+    var card = document.getElementById('gp-'+data.guesser_id);
+    if(card){ card.classList.remove('guessing'); card.classList.add('guessing'); }
+
+    playSound('click');
+});
+
+socket.on('group_game_over', function(data){
+    gameOver = true;
+    if(GROUP_TIMER) clearInterval(GROUP_TIMER);
+    el('guessBtn').disabled   = true;
+    el('guessInput').disabled = true;
+
+    var iWon = data.winner_id === PLAYER_ID;
+    document.getElementById('groupResultIcon').textContent  = iWon ? '🏆' : '😢';
+    document.getElementById('groupResultTitle').textContent = iWon ? 'كسبت! 🎉' : 'خسرت 😢';
+    document.getElementById('groupResultMsg').textContent   =
+        data.winner_name + ' خمّن الرقم ' + data.secret + ' في ' + data.total_guesses + ' محاولة!';
+
+    // Scores table
+    var scList = document.getElementById('groupScoresList');
+    scList.innerHTML = '<div style="font-weight:700;margin-bottom:8px;font-size:.88rem">النتائج:</div>';
+    data.scores.forEach(function(s, i){
+        var div = document.createElement('div');
+        div.style.cssText = 'display:flex;justify-content:space-between;padding:6px 10px;border-radius:8px;margin-bottom:4px;'
+            + (s.won ? 'background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3)' : 'background:var(--surface)');
+        div.innerHTML = '<span>'+(i+1)+'. '+s.name+(s.won?' 🏆':'')+'</span>'
+                      + '<span style="color:var(--muted)">'+s.guesses+' محاولة</span>';
+        scList.appendChild(div);
+    });
+
+    show('groupOverOverlay');
+    if(iWon){ playSound('win'); fireConfetti(); }
+    else playSound('cheat');
+});
+
+function startSpeedTimer(seconds){
+    var remaining = seconds;
+    var maxSec    = seconds;
+    function tick(){
+        remaining--;
+        var pct  = (remaining/maxSec)*100;
+        var bar  = document.getElementById('timerBar');
+        var txt  = document.getElementById('timerText');
+        if(bar)  bar.style.width = pct+'%';
+        if(txt)  txt.textContent = remaining+'s';
+        if(remaining <= 10){
+            if(bar) bar.classList.add('danger');
+            if(txt) txt.classList.add('danger');
+        }
+        if(remaining <= 0){
+            clearInterval(GROUP_TIMER);
+            // الوقت خلص = خسر
+            el('guessBtn').disabled = true;
+            el('guessInput').disabled = true;
+            showToast('⏰ انتهى الوقت!');
+        }
+    }
+    GROUP_TIMER = setInterval(tick, 1000);
+}
+
+// Override make_guess عشان يشتغل مع group rooms
+var _origMakeGuess = makeGuess;
+makeGuess = function(){
+    if(IS_GROUP){
+        var val = el('guessInput').value;
+        if(!val) return;
+        var num = parseInt(val);
+        if(num<1||num>1000){ showToast('الرقم لازم بين 1 و 1000'); return; }
+        playSound('click');
+        socket.emit('group_guess', {room_code: ROOM_CODE, guess: num});
+        el('guessInput').value='';
+    } else {
+        _origMakeGuess();
+    }
+};
 
 // Keyboard shortcuts
 el('guessInput')  && el('guessInput').addEventListener('keydown',  e=>{ if(e.key==='Enter') makeGuess(); });

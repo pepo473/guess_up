@@ -39,7 +39,7 @@ def get_or_create_daily():
     ch = DailyChallenge.query.filter_by(date_str=today).first()
     if not ch:
         import random as _r
-        ch = DailyChallenge(date_str=today, secret=_r.randint(1,1000))
+        ch = DailyChallenge(date_str=today, target=_r.randint(1,1000))
         db.session.add(ch)
         db.session.commit()
     return ch
@@ -114,6 +114,20 @@ def finish_game(room_code, winner_id, loser_id, bet, guesses=0, is_bot=False):
         else:
             transfer_info = transfer_points(winner_id, loser_id, bet,
                                             event=room.random_event)
+        # Speed mode bonus — نضيف نقاط إضافية للفايز
+        mode_bonus = 0
+        if hasattr(room, 'mode'):
+            if room.mode == 'speed_20': mode_bonus = 20
+            elif room.mode == 'speed_10': mode_bonus = 50
+            elif room.mode == 'double':
+                mode_bonus = bet  # ضعف الرهان مضاف
+            if mode_bonus > 0:
+                from models import Player as _P
+                w = _P.query.filter_by(id=winner_id).first()
+                if w:
+                    w.points += mode_bonus
+                    db.session.commit()
+                    transfer_info['mode_bonus'] = mode_bonus
 
     # م8: حفظ الـ log
     log = room_guess_logs.pop(room_code, [])
@@ -253,8 +267,13 @@ def create_room_route():
     is_bot      = request.form.get('bot_game') == '1'
     is_public   = request.form.get('is_public') == '1'
     max_players = int(request.form.get('max_players', 2))
-    mode        = request.form.get('mode', 'classic')   # classic / speed
-    timer_secs  = 30 if mode == 'speed' else 0
+    mode = request.form.get('mode', 'classic')
+    # تحديد وقت التايمر حسب المود
+    MODE_TIMERS = {
+        'speed_20': 20,
+        'speed_10': 10,
+    }
+    timer_secs = MODE_TIMERS.get(mode, 0)
 
     room, err = create_room(session['player_id'], bet, is_bm, is_bot)
     if err: return jsonify({'error': err}), 400
@@ -558,7 +577,9 @@ def on_join(data):
         emit('game_started', {
             'message': '🤖 الكمبيوتر اختار رقم — ابدأ تخمن!',
             'vs_bot': True, 'opponent_name': '🤖 الكمبيوتر',
-            'event': None, 'event_info': {}
+            'event': None, 'event_info': {},
+            'timer_seconds': getattr(room, 'timer_seconds', 0),
+            'mode': getattr(room, 'mode', 'classic')
         }, to=request.sid)
         return
 
@@ -708,6 +729,7 @@ def on_guess(data):
             'bet': bet, 'actual_bet': actual_bet,
             'streak': streak, 'streak_bonus': streak_bonus,
             'event_bonus': event_bonus,
+            'mode_bonus': ti.get('mode_bonus', 0),
             'xp_gained': XP_PER_WIN,
             'room_code': rc,
             'no_punishment': False, 'vs_bot': False,
@@ -1059,43 +1081,45 @@ def admin_unban_player(pid):
 @app.route('/daily')
 def daily_challenge():
     if not is_logged_in(session): return redirect(url_for('index'))
-    ch     = get_or_create_daily()
-    today  = get_today_str()
-    me     = session['player_id']
-    entry  = DailyChallengeEntry.query.filter_by(player_id=me, date_str=today).first()
-    # أفضل 10 لاعبين اليوم
-    leaders = (DailyChallengeEntry.query
-               .filter_by(date_str=today, solved=True)
-               .order_by(DailyChallengeEntry.guesses.asc())
-               .limit(10).all())
-    return render_template('daily.html',
-        challenge=ch, entry=entry, leaders=leaders, today=today)
+    ch  = get_or_create_daily()
+    me  = get_player_by_id(session['player_id'])
+    entry = DailyChallengeEntry.query.filter_by(
+        challenge_id=ch.id, player_id=me.id).first()
+    top = (DailyChallengeEntry.query
+           .filter_by(challenge_id=ch.id, completed=True)
+           .order_by(DailyChallengeEntry.guesses.asc(),
+                     DailyChallengeEntry.time_secs.asc())
+           .limit(20).all())
+    return render_template('daily.html', ch=ch, me=me, entry=entry, top=top)
 
 @app.route('/api/daily/guess', methods=['POST'])
 def daily_guess():
     if not is_logged_in(session): return jsonify({'error':'مش مسجل'}), 401
-    guess  = int(request.form.get('guess', 0))
-    me     = session['player_id']
-    today  = get_today_str()
-    ch     = get_or_create_daily()
+    from datetime import datetime as _dt
+    guess = int(request.form.get('guess', 0))
+    pid   = session['player_id']
+    ch    = get_or_create_daily()
 
-    # جيب أو أنشئ الـ entry
-    entry = DailyChallengeEntry.query.filter_by(player_id=me, date_str=today).first()
+    entry = DailyChallengeEntry.query.filter_by(
+        challenge_id=ch.id, player_id=pid).first()
     if not entry:
-        entry = DailyChallengeEntry(player_id=me, date_str=today, guesses=0, solved=False)
+        entry = DailyChallengeEntry(
+            challenge_id=ch.id, player_id=pid,
+            guesses=0, completed=False, created_at=_dt.utcnow())
         db.session.add(entry)
+        db.session.flush()
 
-    if entry.solved:
+    if entry.completed:
         return jsonify({'error':'حليت التحدي ده قبل كده!'}), 400
 
     entry.guesses += 1
     db.session.commit()
 
-    if guess == ch.secret:
-        entry.solved = True
+    if guess == ch.target:
+        entry.completed = True
         # مكافأة نقاط حسب عدد المحاولات
         bonus = max(10, 100 - (entry.guesses-1)*10)
-        p = Player.query.get(me)
+        p = Player.query.get(pid)
         if p:
             p.points += bonus
             p.xp = (p.xp or 0) + 20
