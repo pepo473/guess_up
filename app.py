@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, session, redirect, url_for, jsonify
 from flask_socketio import SocketIO, emit, join_room as sio_join_room
-from models import db, Player, Room, Punishment, Match, Friendship, Notification, ChatMessage, DailyChallenge, DailyChallengeEntry, GroupRoom, GroupRoomPlayer, DailyChallenge, DailyChallengeEntry
+from models import db, Player, Room, Punishment, Match, Friendship, Notification, ChatMessage, DailyChallenge, DailyChallengeEntry, GroupRoom, GroupRoomPlayer
 from auth import register_player, login_player, get_player_by_id, is_logged_in
 from rooms import create_room, join_room, get_room
 from points import (transfer_points, award_bankrupt_mode_points, is_bankrupt, get_rank,
@@ -220,10 +220,19 @@ def lobby():
                     .filter(Room.player2_id == None, Room.is_bot_game == False)
                     .order_by(Room.created_at.desc()).limit(10).all())
     daily_ready  = can_claim_daily(player)
+    # التحدي اليومي
+    from datetime import datetime as _dt
+    today_str = _dt.utcnow().strftime('%Y-%m-%d')
+    daily_ch  = DailyChallenge.query.filter_by(date_str=today_str).first()
+    daily_entry = None
+    if daily_ch:
+        daily_entry = DailyChallengeEntry.query.filter_by(
+            challenge_id=daily_ch.id, player_id=player.id).first()
     return render_template('lobby.html', player=player,
                            bankrupt=is_bankrupt(player),
                            public_rooms=public_rooms,
                            daily_ready=daily_ready,
+                           daily_entry=daily_entry,
                            title=get_player_title(player))
 
 
