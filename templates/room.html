@@ -13,7 +13,8 @@
 }
 .bet-info { background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);
     border-radius:10px;padding:5px 14px;font-weight:700;font-size:.9rem; }
-.game-area { max-width:700px;margin:0 auto;padding:20px 16px; }
+.hidden { display: none !important; }
+    .game-area { max-width:700px;margin:0 auto;padding:20px 16px; }
 
 /* م11: Loading */
 .loading-screen {
@@ -753,8 +754,14 @@ socket.on('room_ready', (data)=>{
 
 socket.on('game_started', (data)=>{
     hideLoading();
-    hide('waitingState'); hide('secretPhase');
+    // إخفاء إجباري بـ display:none مباشرة
+    var sp = document.getElementById('secretPhase');
+    var ws = document.getElementById('waitingState');
+    if(sp){ sp.style.display='none'; sp.classList.add('hidden'); }
+    if(ws){ ws.style.display='none'; ws.classList.add('hidden'); }
     show('gamePhase');
+    // scroll للأعلى عشان اللاعب يشوف اللعبة
+    window.scrollTo(0,0);
     if(data.opponent_name){
         el('opponentName').textContent = data.opponent_name;
         el('typingText').textContent   = data.opponent_name + ' بيخمن...';
@@ -767,8 +774,8 @@ socket.on('game_started', (data)=>{
 });
 
 socket.on('secret_set', (data)=>{
-    el('secretStatus').textContent = data.message;
-    show('secretStatus');
+    var st = el('secretStatus');
+    if(st){ st.textContent = data.message; show('secretStatus'); }
 });
 
 socket.on('guess_result', (data)=>{
