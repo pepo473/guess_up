@@ -2,132 +2,60 @@
 {% block title %}Admin Panel{% endblock %}
 {% block extra_css %}
 <style>
-.admin-wrap { max-width:900px; margin:0 auto; padding:20px 14px; }
-.page-title { font-size:1.4rem; font-weight:900; margin-bottom:4px; }
-.page-sub   { color:var(--muted); font-size:.85rem; margin-bottom:24px; }
-
-/* Tabs */
-.admin-tabs { display:flex; gap:4px; margin-bottom:20px;
-    background:var(--surface); border-radius:12px; padding:4px;
-    border:1px solid var(--border); }
-.at-btn { flex:1; padding:8px 6px; border:none; border-radius:9px;
-    font-family:'Cairo',sans-serif; font-size:.85rem; font-weight:700;
-    cursor:pointer; color:var(--muted); background:transparent; transition:.15s; }
-.at-btn.active { background:var(--accent); color:#fff; }
-.at-btn .badge { background:rgba(239,68,68,.8); color:#fff; border-radius:10px;
-    padding:1px 6px; font-size:.7rem; margin-right:4px; }
-
-/* Table */
-.admin-table { width:100%; border-collapse:collapse; }
-.admin-table th { text-align:right; padding:9px 10px; font-size:.72rem;
-    color:var(--muted); border-bottom:1px solid var(--border);
-    text-transform:uppercase; letter-spacing:.5px; }
-.admin-table td { padding:10px 10px; border-bottom:1px solid var(--border);
-    vertical-align:middle; }
-.admin-table tr:last-child td { border-bottom:none; }
-.admin-table tr:hover td { background:rgba(124,58,237,.04); }
-
-.player-cell { display:flex; align-items:center; gap:8px; }
-.pl-av { width:32px; height:32px; border-radius:50%; object-fit:cover;
-    background:var(--surface); display:flex; align-items:center;
-    justify-content:center; font-size:.85rem; flex-shrink:0; }
-.pl-name { font-weight:700; font-size:.9rem; }
-.pl-id   { font-size:.72rem; color:var(--muted); }
-
-.pts-cell { color:var(--gold); font-weight:700; font-size:.95rem; }
-
-/* Actions */
-.actions { display:flex; gap:5px; align-items:center; flex-wrap:wrap; }
-.amt-input { width:68px; padding:5px 7px; font-size:.82rem;
-    background:var(--surface); border:1px solid var(--border);
-    border-radius:7px; color:var(--text); font-family:'Cairo',sans-serif;
-    text-align:center; }
-.amt-input:focus { outline:none; border-color:var(--accent); }
-
-.btn-add { background:rgba(52,211,153,.18); color:#6ee7b7;
-    border:1px solid rgba(52,211,153,.3); border-radius:7px;
-    padding:5px 9px; cursor:pointer; font-size:.78rem;
-    font-family:'Cairo',sans-serif; transition:.15s; white-space:nowrap; }
-.btn-sub { background:rgba(251,191,36,.12); color:#fcd34d;
-    border:1px solid rgba(251,191,36,.25); border-radius:7px;
-    padding:5px 9px; cursor:pointer; font-size:.78rem;
-    font-family:'Cairo',sans-serif; transition:.15s; white-space:nowrap; }
-.btn-set { background:rgba(124,58,237,.18); color:#c4b5fd;
-    border:1px solid rgba(124,58,237,.3); border-radius:7px;
-    padding:5px 9px; cursor:pointer; font-size:.78rem;
-    font-family:'Cairo',sans-serif; transition:.15s; white-space:nowrap; }
-.btn-del { background:rgba(239,68,68,.15); color:#fca5a5;
-    border:1px solid rgba(239,68,68,.3); border-radius:7px;
-    padding:5px 9px; cursor:pointer; font-size:.78rem;
-    font-family:'Cairo',sans-serif; transition:.15s; white-space:nowrap; }
-.btn-ban { background:rgba(245,158,11,.15); color:#fcd34d;
-    border:1px solid rgba(245,158,11,.3); border-radius:7px;
-    padding:5px 9px; cursor:pointer; font-size:.78rem;
-    font-family:'Cairo',sans-serif; transition:.15s; white-space:nowrap; }
-.btn-restore { background:rgba(52,211,153,.15); color:#6ee7b7;
-    border:1px solid rgba(52,211,153,.3); border-radius:7px;
-    padding:5px 10px; cursor:pointer; font-size:.82rem;
-    font-family:'Cairo',sans-serif; white-space:nowrap; }
-.btn-add:hover { background:rgba(52,211,153,.3); }
-.btn-sub:hover { background:rgba(251,191,36,.25); }
-.btn-set:hover { background:rgba(124,58,237,.3); }
-.btn-del:hover { background:rgba(239,68,68,.3); }
-.btn-ban:hover { background:rgba(245,158,11,.3); }
+.admin-wrap{max-width:960px;margin:0 auto;padding:20px 16px;}
+.admin-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.admin-header h1{font-size:1.2rem;font-weight:900;}
+.admin-tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:20px;}
+.at-btn{flex:1;padding:8px 6px;border:none;border-radius:9px;font-family:var(--font-ar);font-size:.82rem;font-weight:700;cursor:pointer;color:var(--tx3);background:transparent;transition:.15s;}
+.at-btn.active{background:linear-gradient(135deg,var(--p),var(--p3));color:#fff;}
+.at-btn .badge{background:rgba(244,63,94,.8);color:#fff;border-radius:10px;padding:1px 6px;font-size:.65rem;margin-right:4px;}
+.admin-table{width:100%;border-collapse:collapse;}
+.admin-table th{text-align:right;padding:9px 12px;font-size:.68rem;color:var(--tx3);border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.5px;font-weight:700;}
+.admin-table td{padding:11px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.admin-table tr:last-child td{border-bottom:none;}
+.admin-table tr:hover td{background:rgba(99,102,241,.03);}
+.pl-cell{display:flex;align-items:center;gap:8px;}
+.pl-av{width:32px;height:32px;border-radius:9px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:.8rem;flex-shrink:0;border:1px solid var(--border);overflow:hidden;}
+.pl-av img{width:100%;height:100%;object-fit:cover;}
+.pl-name{font-weight:700;font-size:.88rem;}
+.pl-id{font-size:.68rem;color:var(--tx3);}
+.pts-cell{font-family:var(--font-en);font-weight:900;font-size:.95rem;color:var(--gold2);}
+.actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap;}
+.amt-input{width:65px;padding:6px 8px;font-size:.8rem;background:var(--surface);border:1px solid var(--border);border-radius:7px;color:var(--tx);font-family:var(--font-en);text-align:center;transition:.15s;}
+.amt-input:focus{outline:none;border-color:var(--p);}
+.btn-add{background:rgba(16,185,129,.12);color:#6ee7b7;border:1px solid rgba(16,185,129,.25);border-radius:7px;padding:5px 10px;cursor:pointer;font-size:.76rem;font-family:var(--font-ar);transition:.15s;}
+.btn-sub{background:rgba(245,158,11,.1);color:var(--gold2);border:1px solid rgba(245,158,11,.2);border-radius:7px;padding:5px 10px;cursor:pointer;font-size:.76rem;font-family:var(--font-ar);transition:.15s;}
+.btn-set{background:rgba(99,102,241,.12);color:var(--p2);border:1px solid rgba(99,102,241,.2);border-radius:7px;padding:5px 10px;cursor:pointer;font-size:.76rem;font-family:var(--font-ar);transition:.15s;}
+.btn-ban{background:rgba(245,158,11,.1);color:var(--gold2);border:1px solid rgba(245,158,11,.2);border-radius:7px;padding:5px 10px;cursor:pointer;font-size:.76rem;font-family:var(--font-ar);transition:.15s;}
+.btn-del{background:rgba(244,63,94,.1);color:#fda4af;border:1px solid rgba(244,63,94,.2);border-radius:7px;padding:5px 10px;cursor:pointer;font-size:.76rem;font-family:var(--font-ar);transition:.15s;}
+.btn-restore{background:rgba(16,185,129,.1);color:#6ee7b7;border:1px solid rgba(16,185,129,.2);border-radius:7px;padding:5px 12px;cursor:pointer;font-size:.8rem;font-family:var(--font-ar);}
+.btn-add:hover{background:rgba(16,185,129,.25);}
+.btn-sub:hover{background:rgba(245,158,11,.2);}
+.btn-set:hover{background:rgba(99,102,241,.25);}
+.btn-ban:hover{background:rgba(245,158,11,.25);}
+.btn-del:hover{background:rgba(244,63,94,.25);}
+.badge-banned{background:rgba(245,158,11,.12);color:var(--gold2);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:2px 8px;font-size:.7rem;font-weight:700;}
+.empty-state{text-align:center;color:var(--tx3);padding:36px;font-size:.88rem;}
+.a-toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);border-radius:10px;padding:10px 22px;font-size:.88rem;font-weight:700;z-index:9999;color:#fff;animation:slideUp .3s ease;white-space:nowrap;}
 
 /* Ban Modal */
-.ban-modal-overlay {
-    position:fixed; inset:0; background:rgba(0,0,0,.8);
-    display:flex; align-items:center; justify-content:center;
-    z-index:500; padding:16px;
-}
-.ban-modal {
-    background:var(--card); border:1px solid var(--border);
-    border-radius:16px; padding:24px; width:100%; max-width:380px;
-}
-.ban-modal h3 { font-size:1.1rem; font-weight:900; margin-bottom:16px; }
-.bm-group { margin-bottom:12px; }
-.bm-group label { display:block; font-size:.82rem; color:var(--muted);
-    font-weight:700; margin-bottom:5px; }
-.duration-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
-.dur-btn { padding:7px 4px; border:1px solid var(--border);
-    border-radius:8px; font-family:'Cairo',sans-serif; font-size:.78rem;
-    cursor:pointer; background:var(--surface); color:var(--text);
-    text-align:center; transition:.15s; }
-.dur-btn:hover, .dur-btn.active { background:var(--accent);
-    border-color:var(--accent); color:#fff; }
-
-/* Rank dot */
-.rank-dot { width:9px; height:9px; border-radius:50%; display:inline-block; margin-left:4px; }
-
-/* Status badges */
-.badge-banned  { background:rgba(245,158,11,.15); color:#fcd34d;
-    border:1px solid rgba(245,158,11,.3); border-radius:8px;
-    padding:2px 8px; font-size:.72rem; font-weight:700; }
-.badge-deleted { background:rgba(239,68,68,.12); color:#fca5a5;
-    border:1px solid rgba(239,68,68,.25); border-radius:8px;
-    padding:2px 8px; font-size:.72rem; font-weight:700; }
-
-.empty-state { text-align:center; color:var(--muted); padding:32px; font-size:.9rem; }
-
-/* Toast */
-.a-toast { position:fixed; top:20px; left:50%; transform:translateX(-50%);
-    border-radius:10px; padding:10px 22px; font-size:.9rem;
-    font-weight:700; z-index:9999; color:#fff;
-    animation:atIn .3s ease; white-space:nowrap; }
-@keyframes atIn { from{opacity:0;transform:translateX(-50%) translateY(-8px)}
-                  to{opacity:1;transform:translateX(-50%) translateY(0)} }
+.ban-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:600;padding:16px;}
+.ban-modal{background:var(--card);border:1px solid var(--border2);border-radius:var(--r3);padding:26px;width:100%;max-width:380px;animation:slideUp .25s ease;}
+.ban-modal h3{font-size:1rem;font-weight:900;margin-bottom:16px;}
+.dur-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;}
+.dur-btn{padding:8px 4px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-ar);font-size:.78rem;cursor:pointer;background:var(--surface);color:var(--tx);text-align:center;transition:.15s;}
+.dur-btn:hover,.dur-btn.active{background:var(--p);border-color:var(--p);color:#fff;}
 </style>
 {% endblock %}
-
 {% block content %}
 <!-- Ban Modal -->
-<div id="banModalOverlay" class="ban-modal-overlay hidden">
+<div id="banOverlay" class="ban-overlay hidden">
     <div class="ban-modal">
         <h3>🚫 حظر لاعب</h3>
         <input type="hidden" id="banPid">
-        <div class="bm-group">
+        <div class="mf-group">
             <label>مدة الحظر</label>
-            <div class="duration-grid">
+            <div class="dur-grid">
                 <button class="dur-btn" onclick="setDur('1h',this)">ساعة</button>
                 <button class="dur-btn" onclick="setDur('24h',this)">يوم</button>
                 <button class="dur-btn" onclick="setDur('3d',this)">3 أيام</button>
@@ -136,318 +64,112 @@
                 <button class="dur-btn active" onclick="setDur('permanent',this)">دائم 🔴</button>
             </div>
         </div>
-        <div class="bm-group">
-            <label>سبب الحظر (اختياري)</label>
-            <input type="text" id="banReason" class="input" placeholder="مثال: غش، سلوك سيء...">
+        <div class="mf-group" style="margin-top:12px">
+            <label>سبب الحظر</label>
+            <input type="text" id="banReason" class="input" placeholder="غش، سلوك سيء...">
         </div>
         <div style="display:flex;gap:8px;margin-top:14px">
             <button onclick="confirmBan()" class="btn btn-danger" style="flex:1">حظر 🚫</button>
-            <button onclick="closeBanModal()" class="btn btn-ghost">إلغاء</button>
+            <button onclick="closeBan()" class="btn btn-ghost">إلغاء</button>
         </div>
     </div>
 </div>
 
 <div class="admin-wrap">
-    <div class="page-title">⚡ Admin Panel</div>
-    <div class="page-sub">عدّل نقاط اللاعبين — الباسورد: <code>{{ secret_hint }}</code></div>
-
-    <!-- Tabs -->
-    <div class="admin-tabs">
-        <button class="at-btn active" onclick="switchTab('active',this)">
-            🎮 اللاعبين ({{ players|length }})
-        </button>
-        <button class="at-btn" onclick="switchTab('banned',this)">
-            🚫 المحظورون
-            {% if banned %}<span class="badge">{{ banned|length }}</span>{% endif %}
-        </button>
-        <button class="at-btn" onclick="switchTab('deleted',this)">
-            🗑️ المحذوفون
-            {% if deleted %}<span class="badge">{{ deleted|length }}</span>{% endif %}
-        </button>
+    <div class="admin-header">
+        <h1>⚡ Admin Panel</h1>
+        <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:.74rem;color:var(--tx3)">باسورد: <code style="background:var(--surface);padding:2px 6px;border-radius:5px;font-size:.74rem">{{ secret_hint }}</code></span>
+            <a href="/lobby" class="btn btn-ghost btn-sm">← اللعبة</a>
+        </div>
     </div>
 
-    <!-- Active Players -->
+    <div class="admin-tabs">
+        <button class="at-btn active" onclick="switchTab('active',this)">🎮 اللاعبون ({{ players|length }})</button>
+        <button class="at-btn" onclick="switchTab('banned',this)">🚫 محظورون {% if banned %}<span class="badge">{{ banned|length }}</span>{% endif %}</button>
+        <button class="at-btn" onclick="switchTab('deleted',this)">🗑️ محذوفون {% if deleted %}<span class="badge">{{ deleted|length }}</span>{% endif %}</button>
+    </div>
+
     <div id="tab-active">
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th>#</th><th>اللاعب</th><th>الرتبة</th>
-                    <th>النقاط</th><th>العمليات</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for p in players %}
-            {% set r = p.rank %}
-            <tr id="row-{{ p.id }}">
-                <td style="color:var(--muted);font-size:.82rem">{{ loop.index }}</td>
-                <td>
-                    <div class="player-cell">
-                        {% if p.avatar %}
-                        <img src="/static/avatars/{{ p.avatar }}" class="pl-av">
-                        {% else %}
-                        <div class="pl-av">👤</div>
-                        {% endif %}
-                        <div>
-                            <div class="pl-name">{{ p.player_name }}</div>
-                            <div class="pl-id">#{{ p.id }}</div>
-                        </div>
-                    </div>
-                </td>
-                <td>
-                    <span class="rank-dot" data-rc="{{ r.color }}"></span>
-                    <span style="font-size:.82rem" data-rc-text="{{ r.color }}">{{ r.icon }} {{ r.name }}</span>
-                </td>
-                <td class="pts-cell" id="pts-{{ p.id }}">{{ p.points }}</td>
-                <td>
-                    <div class="actions">
-                        <input type="number" class="amt-input" id="inp-{{ p.id }}"
-                               value="100" min="1" max="99999">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;overflow-x:auto;">
+            <table class="admin-table">
+                <thead><tr><th>#</th><th>اللاعب</th><th>الرتبة</th><th>النقاط</th><th>العمليات</th></tr></thead>
+                <tbody>
+                {% for p in players %}
+                {% set r=p.rank %}
+                <tr id="row-{{ p.id }}">
+                    <td style="color:var(--tx3);font-family:var(--font-en);font-size:.8rem">{{ loop.index }}</td>
+                    <td><div class="pl-cell"><div class="pl-av">{% if p.avatar %}<img src="/static/avatars/{{ p.avatar }}">{% else %}👤{% endif %}</div><div><div class="pl-name">{{ p.player_name }}</div><div class="pl-id">#{{ p.id }}</div></div></div></td>
+                    <td><span style="color:{{ r.color }};font-size:.78rem;font-weight:700">{{ r.icon }} {{ r.name }}</span></td>
+                    <td class="pts-cell" id="pts-{{ p.id }}">{{ p.points }}</td>
+                    <td><div class="actions">
+                        <input type="number" class="amt-input" id="inp-{{ p.id }}" value="100" min="1" max="99999">
                         <button class="btn-add" onclick="editPts({{ p.id }},'add')">+ إضافة</button>
                         <button class="btn-sub" onclick="editPts({{ p.id }},'sub')">- طرح</button>
-                        <button class="btn-set" onclick="editPts({{ p.id }},'set')">=  تحديد</button>
-                        <button class="btn-ban" onclick="openBanModal({{ p.id }}, '{{ p.player_name }}')">🚫 حظر</button>
-                        <button class="btn-del" onclick="deletePlayer({{ p.id }}, '{{ p.player_name }}')">🗑️ حذف</button>
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+                        <button class="btn-set" onclick="editPts({{ p.id }},'set')">=</button>
+                        <button class="btn-ban" onclick="openBan({{ p.id }},'{{ p.player_name }}')">🚫</button>
+                        <button class="btn-del" onclick="deletePlayer({{ p.id }},'{{ p.player_name }}')">🗑️</button>
+                    </div></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <!-- Banned -->
     <div id="tab-banned" style="display:none">
         {% if banned %}
-        <table class="admin-table">
-            <thead><tr><th>اللاعب</th><th>محظور حتى</th><th>السبب</th><th>إجراء</th></tr></thead>
-            <tbody>
-            {% for p in banned %}
-            <tr id="ban-row-{{ p.id }}">
-                <td>
-                    <div class="player-cell">
-                        {% if p.avatar %}<img src="/static/avatars/{{ p.avatar }}" class="pl-av">
-                        {% else %}<div class="pl-av">👤</div>{% endif %}
-                        <div>
-                            <div class="pl-name">{{ p.player_name }}</div>
-                            <div class="pl-id">{{ p.points }} نقطة</div>
-                        </div>
-                    </div>
-                </td>
-                <td>
-                    {% if p.ban_until %}
-                        <span style="color:var(--yellow);font-size:.85rem">
-                            {{ p.ban_until.strftime('%Y/%m/%d %H:%M') }}
-                        </span>
-                    {% else %}
-                        <span class="badge-banned">دائم 🔴</span>
-                    {% endif %}
-                </td>
-                <td style="color:var(--muted);font-size:.82rem">
-                    {{ p.ban_reason or '—' }}
-                </td>
-                <td>
-                    <div style="display:flex;gap:6px">
-                        <button class="btn-restore" onclick="unbanPlayer({{ p.id }}, '{{ p.player_name }}')">
-                            ✅ رفع الحظر
-                        </button>
-                        <button class="btn-ban" onclick="openBanModal({{ p.id }}, '{{ p.player_name }}')">
-                            تعديل
-                        </button>
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <div class="empty-state">🟢 مفيش حسابات محظورة</div>
-        {% endif %}
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;">
+            <table class="admin-table">
+                <thead><tr><th>اللاعب</th><th>محظور حتى</th><th>السبب</th><th>إجراء</th></tr></thead>
+                <tbody>{% for p in banned %}<tr id="ban-row-{{ p.id }}">
+                    <td><div class="pl-cell"><div class="pl-av">{% if p.avatar %}<img src="/static/avatars/{{ p.avatar }}">{% else %}👤{% endif %}</div><div><div class="pl-name">{{ p.player_name }}</div><div class="pl-id">{{ p.points }} pts</div></div></div></td>
+                    <td>{% if p.ban_until %}<span style="color:var(--gold2);font-size:.82rem;font-family:var(--font-en)">{{ p.ban_until.strftime('%Y/%m/%d %H:%M') }}</span>{% else %}<span class="badge-banned">دائم 🔴</span>{% endif %}</td>
+                    <td style="color:var(--tx3);font-size:.8rem">{{ p.ban_reason or '—' }}</td>
+                    <td><div style="display:flex;gap:6px"><button class="btn-restore" onclick="unbanPlayer({{ p.id }},'{{ p.player_name }}')">✅ رفع الحظر</button><button class="btn-ban" onclick="openBan({{ p.id }},'{{ p.player_name }}')">تعديل</button></div></td>
+                </tr>{% endfor %}</tbody>
+            </table>
+        </div>
+        {% else %}<div class="empty-state">🟢 مفيش حسابات محظورة</div>{% endif %}
     </div>
 
-    <!-- Deleted -->
     <div id="tab-deleted" style="display:none">
         {% if deleted %}
-        <table class="admin-table">
-            <thead><tr><th>اللاعب</th><th>تاريخ الحذف</th><th>النقاط</th><th>إجراء</th></tr></thead>
-            <tbody>
-            {% for p in deleted %}
-            <tr id="del-row-{{ p.id }}">
-                <td>
-                    <div class="player-cell">
-                        {% if p.avatar %}<img src="/static/avatars/{{ p.avatar }}" class="pl-av">
-                        {% else %}<div class="pl-av">👤</div>{% endif %}
-                        <div>
-                            <div class="pl-name" style="opacity:.7">{{ p.player_name }}</div>
-                            <div class="pl-id">#{{ p.id }}</div>
-                        </div>
-                    </div>
-                </td>
-                <td style="color:var(--muted);font-size:.82rem">
-                    {{ p.deleted_at.strftime('%Y/%m/%d %H:%M') if p.deleted_at else '—' }}
-                </td>
-                <td class="pts-cell" style="opacity:.7">{{ p.points }}</td>
-                <td>
-                    <button class="btn-restore" onclick="restorePlayer({{ p.id }}, '{{ p.player_name }}')">
-                        ♻️ استعادة
-                    </button>
-                </td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <div class="empty-state">🟢 مفيش حسابات محذوفة</div>
-        {% endif %}
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;">
+            <table class="admin-table">
+                <thead><tr><th>اللاعب</th><th>تاريخ الحذف</th><th>النقاط</th><th>إجراء</th></tr></thead>
+                <tbody>{% for p in deleted %}<tr id="del-row-{{ p.id }}">
+                    <td><div class="pl-cell"><div class="pl-av" style="opacity:.6">{% if p.avatar %}<img src="/static/avatars/{{ p.avatar }}">{% else %}👤{% endif %}</div><div><div class="pl-name" style="opacity:.6">{{ p.player_name }}</div><div class="pl-id">#{{ p.id }}</div></div></div></td>
+                    <td style="color:var(--tx3);font-size:.8rem;font-family:var(--font-en)">{{ p.deleted_at.strftime('%Y/%m/%d %H:%M') if p.deleted_at else '—' }}</td>
+                    <td class="pts-cell" style="opacity:.6">{{ p.points }}</td>
+                    <td><button class="btn-restore" onclick="restorePlayer({{ p.id }},'{{ p.player_name }}')">♻️ استعادة</button></td>
+                </tr>{% endfor %}</tbody>
+            </table>
+        </div>
+        {% else %}<div class="empty-state">🟢 مفيش حسابات محذوفة</div>{% endif %}
     </div>
 
-    <div style="margin-top:20px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-        <a href="/lobby" class="btn btn-ghost">← رجوع للعبة</a>
-        <button onclick="runMigrate()" class="btn-ban" style="padding:8px 16px;font-size:.85rem">
-            ⚙️ تحديث قاعدة البيانات
-        </button>
-        <span id="migrateStatus" style="color:var(--muted);font-size:.82rem"></span>
+    <div style="margin-top:18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <a href="/lobby" class="btn btn-ghost btn-sm">← رجوع للعبة</a>
+        <button onclick="runMigrate()" class="btn-ban" style="padding:8px 16px;font-size:.82rem;border-radius:8px">⚙️ تحديث DB</button>
+        <span id="migrateStatus" style="font-size:.78rem;color:var(--tx3)"></span>
     </div>
 </div>
 {% endblock %}
-
 {% block scripts %}
 <script>
-var _selDur = 'permanent';
-
-// ── Tabs ──────────────────────────────────────────────
-function switchTab(name, btn) {
-    ['active','banned','deleted'].forEach(function(t){
-        document.getElementById('tab-'+t).style.display = 'none';
-    });
-    document.querySelectorAll('.at-btn').forEach(function(b){ b.classList.remove('active'); });
-    document.getElementById('tab-'+name).style.display = 'block';
-    btn.classList.add('active');
-}
-
-// ── Colors ───────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', function(){
-    document.querySelectorAll('[data-rc]').forEach(function(el){
-        el.style.background = el.dataset.rc + '30';
-        el.style.borderColor = el.dataset.rc + '60';
-    });
-    document.querySelectorAll('[data-rc-text]').forEach(function(el){
-        el.style.color = el.dataset.rcText;
-    });
-});
-
-// ── Toast ─────────────────────────────────────────────
-function adminToast(msg, ok) {
-    var t = document.createElement('div');
-    t.className = 'a-toast';
-    t.style.background = ok ? '#10b981' : '#ef4444';
-    t.textContent = msg;
-    document.body.appendChild(t);
-    setTimeout(function(){ t.style.opacity='0'; t.style.transition='opacity .3s';
-        setTimeout(function(){t.remove();},300); }, 3000);
-}
-
-// ── Points ───────────────────────────────────────────
-async function editPts(pid, action) {
-    var amount = document.getElementById('inp-'+pid).value;
-    var f = new FormData();
-    f.append('player_id', pid); f.append('action', action); f.append('amount', amount);
-    var res = await fetch('/admin/edit_points', {method:'POST', body:f});
-    var d   = await res.json();
-    if(d.ok) {
-        document.getElementById('pts-'+pid).textContent = d.new_points;
-        adminToast(d.msg, true);
-    } else adminToast('⚠️ '+d.error, false);
-}
-
-// ── Delete ────────────────────────────────────────────
-async function deletePlayer(pid, name) {
-    if(!confirm('تأكيد حذف حساب "'+name+'"؟\nالحساب سيُخفى ولن يقدر يدخل — يمكن استعادته')) return;
-    var res = await fetch('/admin/delete_player/'+pid, {method:'POST'});
-    var d   = await res.json();
-    if(d.ok) {
-        adminToast(d.msg, true);
-        var row = document.getElementById('row-'+pid);
-        if(row) { row.style.opacity='0'; row.style.transition='opacity .4s';
-            setTimeout(function(){row.remove();},400); }
-    } else adminToast('⚠️ '+d.error, false);
-}
-
-async function restorePlayer(pid, name) {
-    var res = await fetch('/admin/restore_player/'+pid, {method:'POST'});
-    var d   = await res.json();
-    if(d.ok) { adminToast(d.msg, true); setTimeout(function(){location.reload();},800); }
-    else adminToast('⚠️ '+d.error, false);
-}
-
-// ── Ban ───────────────────────────────────────────────
-function openBanModal(pid, name) {
-    document.getElementById('banPid').value = pid;
-    document.getElementById('banReason').value = '';
-    _selDur = 'permanent';
-    document.querySelectorAll('.dur-btn').forEach(function(b){ b.classList.remove('active'); });
-    document.querySelector('[onclick="setDur(\'permanent\',this)"]').classList.add('active');
-    document.getElementById('banModalOverlay').classList.remove('hidden');
-    document.querySelector('.ban-modal h3').textContent = '🚫 حظر: ' + name;
-}
-
-function closeBanModal() {
-    document.getElementById('banModalOverlay').classList.add('hidden');
-}
-
-function setDur(dur, btn) {
-    _selDur = dur;
-    document.querySelectorAll('.dur-btn').forEach(function(b){ b.classList.remove('active'); });
-    btn.classList.add('active');
-}
-
-async function confirmBan() {
-    var pid    = document.getElementById('banPid').value;
-    var reason = document.getElementById('banReason').value;
-    var f = new FormData();
-    f.append('duration', _selDur); f.append('reason', reason);
-    var res = await fetch('/admin/ban_player/'+pid, {method:'POST', body:f});
-    var d   = await res.json();
-    if(d.ok) {
-        adminToast(d.msg, true);
-        closeBanModal();
-        setTimeout(function(){location.reload();},800);
-    } else adminToast('⚠️ '+d.error, false);
-}
-
-async function unbanPlayer(pid, name) {
-    if(!confirm('رفع الحظر عن "'+name+'"؟')) return;
-    var res = await fetch('/admin/unban_player/'+pid, {method:'POST'});
-    var d   = await res.json();
-    if(d.ok) {
-        adminToast(d.msg, true);
-        var row = document.getElementById('ban-row-'+pid);
-        if(row){ row.style.opacity='0'; row.style.transition='opacity .4s';
-            setTimeout(function(){row.remove();location.reload();},400); }
-    } else adminToast('⚠️ '+d.error, false);
-}
-
-document.getElementById('banModalOverlay').addEventListener('click', function(e){
-    if(e.target === this) closeBanModal();
-});
-
-async function runMigrate() {
-    var s = document.getElementById('migrateStatus');
-    s.textContent = '⏳ جاري التحديث...';
-    try {
-        var res = await fetch('/admin/run_migrate');
-        var d   = await res.json();
-        if(d.ok) {
-            s.textContent = '✅ تم! الـ columns موجودة الآن';
-            s.style.color = '#6ee7b7';
-            adminToast('✅ قاعدة البيانات اتحدثت بنجاح!', true);
-            setTimeout(function(){ location.reload(); }, 1500);
-        } else {
-            s.textContent = '❌ ' + d.error;
-            s.style.color = '#fca5a5';
-        }
-    } catch(e) {
-        s.textContent = '❌ فشل الاتصال';
-    }
-}
+var _selDur='permanent';
+function switchTab(n,btn){['active','banned','deleted'].forEach(function(t){document.getElementById('tab-'+t).style.display='none';});document.querySelectorAll('.at-btn').forEach(function(b){b.classList.remove('active');});document.getElementById('tab-'+n).style.display='block';btn.classList.add('active');}
+function adminToast(msg,ok){var t=document.createElement('div');t.className='a-toast';t.style.background=ok?'#10b981':'#ef4444';t.textContent=msg;document.body.appendChild(t);setTimeout(function(){t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(function(){t.remove();},300);},3000);}
+async function editPts(pid,action){var amount=document.getElementById('inp-'+pid).value;var f=new FormData();f.append('player_id',pid);f.append('action',action);f.append('amount',amount);var res=await fetch('/admin/edit_points',{method:'POST',body:f});var d=await res.json();if(d.ok){document.getElementById('pts-'+pid).textContent=d.new_points;adminToast(d.msg,true);}else adminToast('⚠️ '+d.error,false);}
+async function deletePlayer(pid,name){if(!confirm('حذف "'+name+'"؟ يمكن استعادته لاحقاً'))return;var res=await fetch('/admin/delete_player/'+pid,{method:'POST'});var d=await res.json();if(d.ok){adminToast(d.msg,true);var row=document.getElementById('row-'+pid);if(row){row.style.opacity='0';row.style.transition='opacity .4s';setTimeout(function(){row.remove();},400);}}else adminToast('⚠️ '+d.error,false);}
+async function restorePlayer(pid,name){var res=await fetch('/admin/restore_player/'+pid,{method:'POST'});var d=await res.json();if(d.ok){adminToast(d.msg,true);setTimeout(function(){location.reload();},800);}else adminToast('⚠️ '+d.error,false);}
+function openBan(pid,name){document.getElementById('banPid').value=pid;document.getElementById('banReason').value='';_selDur='permanent';document.querySelectorAll('.dur-btn').forEach(function(b){b.classList.remove('active');});document.querySelector('[onclick="setDur(\'permanent\',this)"]').classList.add('active');document.getElementById('banOverlay').classList.remove('hidden');document.querySelector('.ban-modal h3').textContent='🚫 حظر: '+name;}
+function closeBan(){document.getElementById('banOverlay').classList.add('hidden');}
+function setDur(dur,btn){_selDur=dur;document.querySelectorAll('.dur-btn').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');}
+async function confirmBan(){var pid=document.getElementById('banPid').value;var reason=document.getElementById('banReason').value;var f=new FormData();f.append('duration',_selDur);f.append('reason',reason);var res=await fetch('/admin/ban_player/'+pid,{method:'POST',body:f});var d=await res.json();if(d.ok){adminToast(d.msg,true);closeBan();setTimeout(function(){location.reload();},800);}else adminToast('⚠️ '+d.error,false);}
+async function unbanPlayer(pid,name){if(!confirm('رفع الحظر عن "'+name+'"؟'))return;var res=await fetch('/admin/unban_player/'+pid,{method:'POST'});var d=await res.json();if(d.ok){adminToast(d.msg,true);setTimeout(function(){location.reload();},700);}else adminToast('⚠️ '+d.error,false);}
+async function runMigrate(){var s=document.getElementById('migrateStatus');s.textContent='⏳ ...';var res=await fetch('/admin/run_migrate');var d=await res.json();if(d.ok){s.textContent='✅ تم!';s.style.color='#6ee7b7';setTimeout(function(){location.reload();},1500);}else{s.textContent='❌ '+d.error;s.style.color='#fda4af';}}
+document.getElementById('banOverlay').addEventListener('click',function(e){if(e.target===this)closeBan();});
 </script>
 {% endblock %}

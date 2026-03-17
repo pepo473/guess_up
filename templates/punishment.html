@@ -1,29 +1,56 @@
 {% extends 'base.html' %}
-{% block title %}العقاب - Guess Up{% endblock %}
-
+{% block title %}العقاب — Guess Up{% endblock %}
+{% block extra_css %}
+<style>
+.pun-wrap{max-width:520px;margin:40px auto;padding:0 16px;}
+.pun-card{background:linear-gradient(135deg,rgba(244,63,94,.08),rgba(99,102,241,.04));border:1px solid rgba(244,63,94,.25);border-radius:var(--r3);padding:36px 28px;text-align:center;}
+.pun-icon{font-size:3rem;margin-bottom:14px;display:block;}
+.pun-card h2{font-size:1.2rem;font-weight:900;margin-bottom:6px;}
+.pun-card p{color:var(--tx3);font-size:.85rem;margin-bottom:24px;}
+.pun-input{text-align:right;direction:rtl;}
+.pun-input textarea{width:100%;min-height:100px;resize:vertical;}
+.wa-row{display:flex;gap:8px;margin-top:10px;}
+.wa-row input{flex:1;}
+</style>
+{% endblock %}
 {% block content %}
-<div class="container" style="max-width:500px;padding-top:60px">
-    <div class="card" style="text-align:center;padding:40px">
-        <div style="font-size:3.5rem;margin-bottom:16px">😈</div>
-        <h2 style="font-size:1.6rem;font-weight:900;margin-bottom:8px">اكتب عقاب الخاسر</h2>
-        <p style="color:var(--muted);margin-bottom:28px">الخاسر: <strong style="color:var(--accent2)">{{ loser.player_name }}</strong></p>
-
-        <form action="/punishment/{{ room.room_code }}" method="POST">
-            <div style="text-align:right;margin-bottom:14px">
-                <label style="display:block;margin-bottom:6px;font-weight:600;color:var(--muted);font-size:0.9rem">العقاب</label>
-                <textarea name="punishment_text" class="input" rows="4"
-                    placeholder="مثال: تجيب لنا عشاء، تعمل حاجة مضحكة..."
-                    required></textarea>
+<div class="pun-wrap">
+    <div class="pun-card">
+        <span class="pun-icon">😈</span>
+        <h2>فزت! اكتب عقاب للخاسر</h2>
+        <p>الخاسر سيستلم عقابك كإشعار حتى لو خرج من اللعبة</p>
+        <div class="pun-input">
+            <div class="mf-group"><label>العقاب</label><textarea id="punText" class="input" placeholder="اكتب العقاب هنا..." maxlength="200"></textarea></div>
+            <div class="mf-group">
+                <label>واتساب الخاسر (اختياري)</label>
+                <div class="wa-row">
+                    <span style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:11px 12px;font-size:.88rem;color:var(--tx3);white-space:nowrap">+20</span>
+                    <input type="tel" id="punWa" class="input" placeholder="رقم الموبايل">
+                </div>
             </div>
-            <div style="text-align:right;margin-bottom:20px">
-                <label style="display:block;margin-bottom:6px;font-weight:600;color:var(--muted);font-size:0.9rem">رقم واتساب للتواصل</label>
-                <input type="tel" name="whatsapp" class="input" placeholder="01012345678" required>
-            </div>
-            <button type="submit" class="btn btn-danger" style="width:100%;font-size:1.1rem;padding:14px">
-                إرسال العقاب 🔥
-            </button>
-        </form>
-        <a href="/lobby" style="display:block;margin-top:12px;color:var(--muted);font-size:0.9rem">تخطي وارجع للوبي</a>
+        </div>
+        <button onclick="submitPunishment()" class="btn btn-danger" style="width:100%;margin-top:6px;padding:13px">إرسال العقاب 😈</button>
+        <div id="punStatus" style="margin-top:12px;display:none"></div>
     </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function submitPunishment(){
+    var text=document.getElementById('punText').value.trim();
+    var wa=document.getElementById('punWa').value.trim();
+    if(!text){showToast('⚠️ اكتب العقاب الأول');return;}
+    var f=new FormData();f.append('text',text);if(wa)f.append('whatsapp',wa);
+    var code=window.location.pathname.split('/').pop();
+    var res=await fetch('/punishment/'+code,{method:'POST',body:f});var d=await res.json();
+    if(d.ok){
+        var st=document.getElementById('punStatus');
+        st.style.display='block';
+        st.innerHTML='<div class="alert alert-success">✅ تم إرسال العقاب!</div>';
+        setTimeout(function(){window.location.href='/lobby';},1800);
+    }else showToast('⚠️ '+d.error);
+}
+// منع الإغلاق
+window.addEventListener('beforeunload',function(e){e.preventDefault();e.returnValue='';});
+</script>
 {% endblock %}

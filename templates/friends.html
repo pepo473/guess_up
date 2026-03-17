@@ -2,227 +2,118 @@
 {% block title %}الأصدقاء — Guess Up{% endblock %}
 {% block extra_css %}
 <style>
-.friends-wrap { max-width:680px;margin:0 auto;padding:20px 14px; }
-.page-title { font-size:1.3rem;font-weight:900;margin-bottom:20px;display:flex;align-items:center;gap:10px; }
+.fr-wrap{max-width:660px;margin:0 auto;padding:20px 16px;}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.search-box{position:relative;margin-bottom:18px;}
+.search-box input{padding-right:42px;}
+.search-icon{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--tx3);pointer-events:none;}
+.search-results{position:absolute;top:100%;left:0;right:0;z-index:200;background:var(--card);border:1px solid var(--border2);border-radius:var(--r2);margin-top:6px;max-height:280px;overflow-y:auto;box-shadow:0 12px 30px rgba(0,0,0,.5);}
+.sr-item{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;}
+.sr-item:last-child{border-bottom:none;}
+.sr-item:hover{background:var(--card2);}
+.sr-av{width:34px;height:34px;border-radius:10px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0;border:1px solid var(--border);overflow:hidden;}
+.sr-av img{width:100%;height:100%;object-fit:cover;}
+.sr-name{flex:1;font-weight:700;font-size:.88rem;}
+.sr-pts{font-size:.72rem;color:var(--tx3);}
 
-/* Search */
-.search-box { position:relative;margin-bottom:20px; }
-.search-box input { padding-right:40px; }
-.search-icon { position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted); }
-.search-results {
-    position:absolute;top:100%;left:0;right:0;z-index:200;
-    background:var(--card);border:1px solid var(--border);
-    border-radius:var(--radius);margin-top:4px;
-    max-height:300px;overflow-y:auto;
-    box-shadow:0 8px 24px rgba(0,0,0,.4);
-}
-.sr-item {
-    display:flex;align-items:center;gap:10px;padding:10px 14px;
-    border-bottom:1px solid var(--border);
-}
-.sr-item:last-child { border-bottom:none; }
-.sr-avatar { width:34px;height:34px;border-radius:50%;object-fit:cover;background:var(--surface);
-             display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0; }
-.sr-name { flex:1;font-weight:700;font-size:.9rem; }
-.sr-pts  { font-size:.78rem;color:var(--muted); }
-
-/* Section */
-.section { margin-bottom:24px; }
-.sec-title {
-    font-size:.75rem;font-weight:700;color:var(--muted);
-    text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;
-}
-.friend-item {
-    display:flex;align-items:center;gap:12px;padding:12px 16px;
-    background:var(--card);border:1px solid var(--border);
-    border-radius:var(--radius);margin-bottom:8px;
-}
-.fr-avatar { width:40px;height:40px;border-radius:50%;object-fit:cover;
-             background:var(--surface);display:flex;align-items:center;
-             justify-content:center;font-size:1rem;flex-shrink:0; }
-.fr-info { flex:1;min-width:0; }
-.fr-name { font-weight:700;font-size:.92rem; }
-.fr-pts  { font-size:.76rem;color:var(--muted);margin-top:1px; }
-.fr-actions { display:flex;gap:6px;flex-shrink:0; }
-
-/* Status dot */
-.status-dot { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
-.dot-online  { background:var(--green); }
-.dot-offline { background:var(--muted); }
-
-.empty-state { text-align:center;color:var(--muted);padding:32px;font-size:.9rem; }
+.sec-header{font-size:.7rem;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;padding:0 2px;}
+.friend-item{display:flex;align-items:center;gap:12px;padding:13px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:8px;transition:all .2s;}
+.friend-item:hover{border-color:var(--border2);}
+.fr-av{width:42px;height:42px;border-radius:13px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;border:1px solid var(--border);overflow:hidden;}
+.fr-av img{width:100%;height:100%;object-fit:cover;}
+.fr-info{flex:1;min-width:0;}
+.fr-name{font-weight:700;font-size:.92rem;}
+.fr-pts{font-size:.74rem;color:var(--tx3);margin-top:1px;}
+.fr-actions{display:flex;gap:6px;flex-shrink:0;}
+.empty-fr{text-align:center;color:var(--tx3);padding:32px;font-size:.88rem;background:var(--card);border:1px dashed var(--border);border-radius:var(--r2);}
 </style>
 {% endblock %}
-
 {% block content %}
-<div class="friends-wrap">
-    <div class="page-title">👥 الأصدقاء</div>
+<div class="fr-wrap">
+    <div class="page-header">
+        <h1 style="font-size:1.2rem;font-weight:900">👥 الأصدقاء</h1>
+        <a href="/lobby" class="btn btn-ghost btn-sm">← اللوبي</a>
+    </div>
 
-    <!-- Search -->
     <div class="search-box">
         <span class="search-icon">🔍</span>
-        <input type="text" class="input" id="searchInput"
-               placeholder="ابحث عن لاعب بالاسم..." autocomplete="off"
-               oninput="searchPlayers(this.value)">
+        <input type="text" class="input" id="searchInput" placeholder="ابحث عن لاعب بالاسم..." autocomplete="off" oninput="searchPlayers(this.value)">
         <div id="searchResults" class="search-results" style="display:none"></div>
     </div>
 
-    <!-- Incoming Requests -->
     {% if incoming %}
-    <div class="section">
-        <div class="sec-title">🔔 طلبات واردة ({{ incoming|length }})</div>
-        {% for fr in incoming %}
-        <div class="friend-item" id="req-{{ fr.sender.id }}">
-            <div class="fr-avatar">
-                {% if fr.sender.avatar %}
-                <img src="/static/avatars/{{ fr.sender.avatar }}"
-                     style="width:40px;height:40px;border-radius:50%;object-fit:cover">
-                {% else %}👤{% endif %}
-            </div>
-            <div class="fr-info">
-                <div class="fr-name">{{ fr.sender.player_name }}</div>
-                <div class="fr-pts">{{ fr.sender.points }} نقطة</div>
-            </div>
-            <div class="fr-actions">
-                <button onclick="acceptFriend({{ fr.sender.id }})"
-                        class="btn btn-green btn-sm">قبول ✓</button>
-                <button onclick="rejectFriend({{ fr.sender.id }})"
-                        class="btn btn-ghost btn-sm">رفض</button>
-            </div>
+    <div class="sec-header">🔔 طلبات واردة ({{ incoming|length }})</div>
+    {% for fr in incoming %}
+    <div class="friend-item" id="req-{{ fr.sender.id }}">
+        <div class="fr-av">{% if fr.sender.avatar %}<img src="/static/avatars/{{ fr.sender.avatar }}">{% else %}👤{% endif %}</div>
+        <div class="fr-info"><div class="fr-name">{{ fr.sender.player_name }}</div><div class="fr-pts">{{ fr.sender.points }} نقطة</div></div>
+        <div class="fr-actions">
+            <button onclick="acceptFriend({{ fr.sender.id }})" class="btn btn-teal btn-sm">قبول ✓</button>
+            <button onclick="rejectFriend({{ fr.sender.id }})" class="btn btn-ghost btn-sm">رفض</button>
         </div>
-        {% endfor %}
     </div>
+    {% endfor %}
     {% endif %}
 
-    <!-- Outgoing Requests -->
     {% if outgoing %}
-    <div class="section">
-        <div class="sec-title">⏳ طلبات مرسلة</div>
-        {% for fr in outgoing %}
-        <div class="friend-item">
-            <div class="fr-avatar">
-                {% if fr.receiver.avatar %}
-                <img src="/static/avatars/{{ fr.receiver.avatar }}"
-                     style="width:40px;height:40px;border-radius:50%;object-fit:cover">
-                {% else %}👤{% endif %}
-            </div>
-            <div class="fr-info">
-                <div class="fr-name">{{ fr.receiver.player_name }}</div>
-                <div class="fr-pts">{{ fr.receiver.points }} نقطة</div>
-            </div>
-            <div class="fr-actions">
-                <button onclick="rejectFriend({{ fr.receiver.id }})"
-                        class="btn btn-ghost btn-sm">إلغاء</button>
-            </div>
-        </div>
-        {% endfor %}
+    <div class="sec-header" style="margin-top:12px">⏳ طلبات مرسلة</div>
+    {% for fr in outgoing %}
+    <div class="friend-item">
+        <div class="fr-av">{% if fr.receiver.avatar %}<img src="/static/avatars/{{ fr.receiver.avatar }}">{% else %}👤{% endif %}</div>
+        <div class="fr-info"><div class="fr-name">{{ fr.receiver.player_name }}</div><div class="fr-pts">{{ fr.receiver.points }} نقطة</div></div>
+        <div class="fr-actions"><button onclick="rejectFriend({{ fr.receiver.id }})" class="btn btn-ghost btn-sm">إلغاء</button></div>
     </div>
+    {% endfor %}
     {% endif %}
 
-    <!-- Friends List -->
-    <div class="section">
-        <div class="sec-title">✅ أصدقاؤك ({{ friends|length }})</div>
-        {% if friends %}
-        {% for fr in friends %}
-        <div class="friend-item">
-            <div class="fr-avatar">
-                {% if fr.avatar %}
-                <img src="/static/avatars/{{ fr.avatar }}"
-                     style="width:40px;height:40px;border-radius:50%;object-fit:cover">
-                {% else %}👤{% endif %}
-            </div>
-            <div class="fr-info">
-                <a href="/player/{{ fr.id }}" style="text-decoration:none;color:var(--text)">
-                    <div class="fr-name">{{ fr.player_name }}</div>
-                </a>
-                <div class="fr-pts">{{ fr.points }} نقطة</div>
-            </div>
-            <div class="fr-actions">
-                <a href="/chat/{{ fr.id }}" class="btn btn-primary btn-sm">💬 شات</a>
-                <button onclick="removeFriend({{ fr.id }}, this)"
-                        class="btn btn-ghost btn-sm">حذف</button>
-            </div>
+    <div class="sec-header" style="margin-top:12px">✅ أصدقاؤك ({{ friends|length }})</div>
+    {% if friends %}
+    {% for fr in friends %}
+    <div class="friend-item">
+        <div class="fr-av">{% if fr.avatar %}<img src="/static/avatars/{{ fr.avatar }}">{% else %}👤{% endif %}</div>
+        <div class="fr-info">
+            <a href="/player/{{ fr.id }}" style="text-decoration:none;color:inherit"><div class="fr-name">{{ fr.player_name }}</div></a>
+            <div class="fr-pts">{{ fr.points }} نقطة</div>
         </div>
-        {% endfor %}
-        {% else %}
-        <div class="empty-state">
-            مفيش أصدقاء لسه 😅<br>
-            ابحث عن لاعب واضغط "إضافة"
+        <div class="fr-actions">
+            <a href="/chat/{{ fr.id }}" class="btn btn-primary btn-sm">💬 شات</a>
+            <button onclick="removeFriend({{ fr.id }},this)" class="btn btn-ghost btn-sm">حذف</button>
         </div>
-        {% endif %}
     </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-fr">مفيش أصدقاء لسه 😅<br><small style="margin-top:6px;display:block">ابحث عن لاعب واضغط إضافة</small></div>
+    {% endif %}
 </div>
 {% endblock %}
-
 {% block scripts %}
 <script>
-var searchTimer = null;
-
+var _st=null;
 function searchPlayers(q){
-    clearTimeout(searchTimer);
-    var res = document.getElementById('searchResults');
-    if(q.length < 2){ res.style.display='none'; return; }
-    searchTimer = setTimeout(async function(){
-        var data = await fetch('/friends/search?q='+encodeURIComponent(q)).then(function(r){return r.json();});
-        if(!data.length){ res.style.display='none'; return; }
-        res.innerHTML = '';
+    clearTimeout(_st);var res=document.getElementById('searchResults');
+    if(q.length<2){res.style.display='none';return;}
+    _st=setTimeout(async function(){
+        var data=await fetch('/friends/search?q='+encodeURIComponent(q)).then(function(r){return r.json();});
+        if(!data.length){res.style.display='none';return;}
+        res.innerHTML='';
         data.forEach(function(p){
-            var div = document.createElement('div');
-            div.className = 'sr-item';
-            var av = p.avatar
-                ? '<img src="/static/avatars/'+p.avatar+'" style="width:34px;height:34px;border-radius:50%;object-fit:cover">'
-                : '<div class="sr-avatar">👤</div>';
-            var btn = '';
-            if(p.status === 'none')
-                btn = '<button onclick="addFriend('+p.id+',this)" class="btn btn-primary btn-sm">إضافة +</button>';
-            else if(p.status === 'pending' && p.is_sender)
-                btn = '<span style="color:var(--muted);font-size:.78rem">تم الإرسال</span>';
-            else if(p.status === 'pending')
-                btn = '<button onclick="acceptFriend('+p.id+')" class="btn btn-green btn-sm">قبول</button>';
-            else if(p.status === 'accepted')
-                btn = '<a href="/chat/'+p.id+'" class="btn btn-ghost btn-sm">💬</a>';
-            div.innerHTML = av
-                + '<div class="sr-name">'+p.name+'<div class="sr-pts">'+p.points+' نقطة</div></div>'
-                + btn;
-            res.appendChild(div);
+            var d=document.createElement('div');d.className='sr-item';
+            var av=p.avatar?'<img src="/static/avatars/'+p.avatar+'">':'👤';
+            var btn='';
+            if(p.status==='none') btn='<button onclick="addFriend('+p.id+',this)" class="btn btn-primary btn-xs">+ إضافة</button>';
+            else if(p.status==='pending'&&p.is_sender) btn='<span style="color:var(--tx3);font-size:.74rem">تم الإرسال</span>';
+            else if(p.status==='pending') btn='<button onclick="acceptFriend('+p.id+')" class="btn btn-teal btn-xs">قبول</button>';
+            else if(p.status==='accepted') btn='<a href="/chat/'+p.id+'" class="btn btn-ghost btn-xs">💬</a>';
+            d.innerHTML='<div class="sr-av">'+av+'</div><div class="sr-name">'+p.name+'<div class="sr-pts">'+p.points+' نقطة</div></div>'+btn;
+            res.appendChild(d);
         });
-        res.style.display = 'block';
-    }, 300);
+        res.style.display='block';
+    },300);
 }
-
-document.addEventListener('click', function(e){
-    if(!e.target.closest('.search-box'))
-        document.getElementById('searchResults').style.display='none';
-});
-
-async function addFriend(pid, btn){
-    btn.disabled=true; btn.textContent='جاري...';
-    var res = await fetch('/friends/request/'+pid,{method:'POST'});
-    var d   = await res.json();
-    if(d.ok){ btn.textContent='تم الإرسال ✓'; btn.className='btn btn-ghost btn-sm'; }
-    else { btn.disabled=false; btn.textContent='إضافة +'; showToast('⚠️ '+d.error); }
-}
-
-async function acceptFriend(pid){
-    var res = await fetch('/friends/accept/'+pid,{method:'POST'});
-    var d   = await res.json();
-    if(d.ok){ showToast('✅ تمت إضافة الصديق!'); setTimeout(function(){location.reload();},800); }
-    else showToast('⚠️ '+d.error);
-}
-
-async function rejectFriend(pid){
-    await fetch('/friends/reject/'+pid,{method:'POST'});
-    var row = document.getElementById('req-'+pid);
-    if(row) row.remove();
-    showToast('تم الرفض');
-}
-
-async function removeFriend(pid, btn){
-    if(!confirm('تأكيد حذف الصديق؟')) return;
-    btn.disabled=true;
-    await fetch('/friends/remove/'+pid,{method:'POST'});
-    showToast('تم الحذف');
-    setTimeout(function(){location.reload();},600);
-}
+document.addEventListener('click',function(e){if(!e.target.closest('.search-box'))document.getElementById('searchResults').style.display='none';});
+async function addFriend(pid,btn){btn.disabled=true;btn.textContent='...';var r=await fetch('/friends/request/'+pid,{method:'POST'});var d=await r.json();if(d.ok){btn.textContent='تم ✓';btn.className='btn btn-ghost btn-xs';}else{btn.disabled=false;btn.textContent='+ إضافة';showToast('⚠️ '+d.error);}}
+async function acceptFriend(pid){var r=await fetch('/friends/accept/'+pid,{method:'POST'});var d=await r.json();if(d.ok){showToast('✅ أصبحتم أصدقاء!');setTimeout(function(){location.reload();},700);}else showToast('⚠️ '+d.error);}
+async function rejectFriend(pid){await fetch('/friends/reject/'+pid,{method:'POST'});var row=document.getElementById('req-'+pid);if(row)row.remove();showToast('تم');}
+async function removeFriend(pid,btn){if(!confirm('تأكيد حذف الصديق؟'))return;btn.disabled=true;await fetch('/friends/remove/'+pid,{method:'POST'});showToast('تم الحذف');setTimeout(function(){location.reload();},600);}
 </script>
 {% endblock %}

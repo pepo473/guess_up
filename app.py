@@ -14,7 +14,7 @@ from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
-app.config['SECRET_KEY']                     = 'guess_up_secret_2024'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24).hex())
 app.config['SQLALCHEMY_DATABASE_URI']        = 'sqlite:///guess_up.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER']                  = os.path.join('static', 'avatars')
@@ -22,7 +22,8 @@ app.config['MAX_CONTENT_LENGTH']             = 2 * 1024 * 1024
 ALLOWED_EXT = {'png','jpg','jpeg','gif','webp'}
 
 db.init_app(app)
-socketio = SocketIO(app, cors_allowed_origins="*", manage_session=False)
+_ALLOWED = os.environ.get('ALLOWED_ORIGINS', 'https://web-production-57a9a.up.railway.app')
+socketio = SocketIO(app, cors_allowed_origins=_ALLOWED, manage_session=False)
 
 
 # ════════════════════════════════════════════════════════
@@ -50,6 +51,36 @@ def inject_player():
         pid=session.get('player_id')
         return Player.query.filter_by(id=pid).first() if pid else None
     return dict(get_player=get_player)
+
+# ── Security ─────────────────────────────────────────────────────────────────
+import time as _time
+from collections import defaultdict
+
+_guess_times    = {}          # f"{pid}:{rc}" -> last_guess_timestamp
+_admin_attempts = defaultdict(int)
+_admin_blocked  = {}          # ip -> block_until_timestamp
+_room_created   = {}          # room_code -> created_timestamp
+ROOM_MAX_AGE    = 3600        # ساعة — بعدها بتتمسح من الذاكرة
+
+def _rate_ok(player_id, room_code, min_gap=0.4):
+    """مش يخمن أسرع من كل 400ms"""
+    key = f"{player_id}:{room_code}"
+    now = _time.time()
+    if now - _guess_times.get(key, 0) < min_gap:
+        return False
+    _guess_times[key] = now
+    return True
+
+def _cleanup_rooms():
+    """امسح الغرف القديمة من الذاكرة"""
+    now = _time.time()
+    for code in list(_room_created.keys()):
+        if now - _room_created[code] > ROOM_MAX_AGE:
+            room_secrets.pop(code, None)
+            room_players.pop(code, None)
+            room_guess_logs.pop(code, None)
+            room_spectators.pop(code, None)
+            _room_created.pop(code, None)
 
 # ── in-memory ────────────────────────────────────────────────────────────────
 room_secrets     = {}   # room_code -> {player_id: secret}
@@ -291,7 +322,8 @@ def create_room_route():
     db.session.commit()
 
     if is_bot: create_bot_session(room.room_code)
-    player_status[session['player_id']] = 'waiting'  # م5
+    player_status[session['player_id']] = 'waiting'
+    _room_created[room.room_code] = _time.time()  # للـ cleanup  # م5
 
     # ── بعت notification لأصدقاء اللاعب لو الغرفة عامة ──
     if is_public and not is_bot:
@@ -359,6 +391,8 @@ def punishment(room_code):
                               loser_id=loser_id, punishment_text=text, whatsapp_number=whatsapp))
     db.session.commit()
     socketio.emit('punishment_received', {'text': text, 'whatsapp': whatsapp}, room=room_code)
+    # كمان بعته للـ personal room بتاع الخاسر لو خرج من الغرفة
+    socketio.emit('punishment_received', {'text': text, 'whatsapp': whatsapp}, room=f'user_{loser_id}')
     # ── notification للخاسر يوصله العقاب حتى لو خرج ──
     winner = get_player_by_id(room.winner_id)
     send_notification(
@@ -635,8 +669,11 @@ def on_set_secret(data):
     room_secrets[rc][pid] = int(secret)
     if len(room_secrets[rc]) >= 2:
         room = get_room(rc)
-        if room: room.status = 'playing'; db.session.commit()
-        emit('game_started', {'message':'🎮 اللعبة بدأت!'}, room=rc)
+        # atomic check — مش يتعمل مرتين
+        if room and room.status != 'playing':
+            room.status = 'playing'
+            db.session.commit()
+            emit('game_started', {'message':'🎮 اللعبة بدأت!'}, room=rc)
     else:
         emit('secret_set', {'message':'✅ تمام! استنى صاحبك...'}, to=request.sid)
 
@@ -650,6 +687,11 @@ def on_guess(data):
     if not rc or guess is None or not gid: return
     room = get_room(rc)
     if not room: return
+
+    # Rate limit — مش أسرع من 400ms
+    if not _rate_ok(gid, rc):
+        emit('error_msg', {'message': '⚠️ استنى شوية!'}, to=request.sid)
+        return
 
     room_guesses.setdefault(rc, {})
     room_guesses[rc][gid] = room_guesses[rc].get(gid, 0) + 1
@@ -834,7 +876,7 @@ def on_chat(data):
 
 
 # ══ Admin Panel ══════════════════════════════════════════════
-ADMIN_SECRET = 'guessup_admin_2024'   # ← غيّره لو حابب
+ADMIN_SECRET = os.environ.get('ADMIN_SECRET', 'guessup_admin_2024')
 
 @app.route('/admin')
 def admin_panel():
@@ -891,11 +933,22 @@ def admin_panel():
 @app.route('/admin/login', methods=['GET','POST'])
 def admin_login():
     err = ''
+    ip  = request.remote_addr or 'unknown'
+    # فحص الحظر
+    if ip in _admin_blocked and _time.time() < _admin_blocked[ip]:
+        wait = int(_admin_blocked[ip] - _time.time())
+        return f'<h2 style="color:red;font-family:sans-serif">🚫 محاولات كتير — استنى {wait} ثانية</h2>', 429
     if request.method == 'POST':
         if request.form.get('secret') == ADMIN_SECRET:
+            _admin_attempts[ip] = 0
             session['admin_auth'] = ADMIN_SECRET
             return redirect(url_for('admin_panel'))
-        err = '❌ باسورد غلط'
+        _admin_attempts[ip] += 1
+        if _admin_attempts[ip] >= 5:
+            _admin_blocked[ip] = _time.time() + 300  # 5 دقايق
+            err = '🚫 تم حظرك 5 دقايق بسبب كتر المحاولات'
+        else:
+            err = f'❌ باسورد غلط ({5 - _admin_attempts[ip]} محاولة باقية)'
     return f"""
     <html><head><meta charset="utf-8">
     <style>
@@ -1590,6 +1643,17 @@ with app.app_context():
     from migrate import run_migrations
     run_migrations(os.path.join(app.instance_path, 'guess_up.db'))
     db.create_all()
+    # WAL mode للـ SQLite عشان يتحمل concurrent writes
+    try:
+        import sqlite3 as _sq3
+        _c = _sq3.connect(os.path.join(app.instance_path, 'guess_up.db'))
+        _c.execute("PRAGMA journal_mode=WAL")
+        _c.execute("PRAGMA synchronous=NORMAL")
+        _c.execute("PRAGMA cache_size=-32000")   # 32MB cache
+        _c.commit(); _c.close()
+        print("[DB] ✅ WAL mode enabled")
+    except Exception as _e:
+        print(f"[DB] WAL mode failed: {_e}")
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, host='0.0.0.0', port=5000)

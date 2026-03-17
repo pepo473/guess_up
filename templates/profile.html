@@ -1,321 +1,216 @@
 {% extends 'base.html' %}
-{% block title %}{{ target.player_name }} - Guess Up{% endblock %}
-
+{% block title %}{{ target.player_name }} — Guess Up{% endblock %}
 {% block extra_css %}
 <style>
-.profile-hero {
-    text-align:center;padding:32px 20px 22px;
-    background:linear-gradient(180deg,rgba(124,58,237,.12) 0%,transparent 100%);
-    border-bottom:1px solid var(--border);
-}
-.avatar-lg { width:86px;height:86px;border-radius:50%;object-fit:cover;border:3px solid var(--accent);margin:0 auto 12px;display:block; }
-.avatar-ph { width:86px;height:86px;border-radius:50%;background:var(--surface);border:3px solid var(--border);
-             display:flex;align-items:center;justify-content:center;font-size:2.4rem;margin:0 auto 12px; }
-.profile-name { font-size:1.5rem;font-weight:900;margin-bottom:3px; }
-.profile-title { color:#c4b5fd;font-size:.85rem;margin-bottom:5px; }
-.profile-pts   { color:var(--accent2);font-weight:700;font-size:1rem; }
-.profile-since { color:var(--muted);font-size:.78rem;margin-top:3px; }
+.profile-wrap{max-width:720px;margin:0 auto;padding:0 16px 40px;}
+.profile-hero{background:linear-gradient(135deg,rgba(99,102,241,.1),rgba(167,139,250,.05));border:1px solid var(--border2);border-radius:0 0 var(--r3) var(--r3);padding:36px 24px 28px;text-align:center;margin-bottom:20px;position:relative;overflow:hidden;}
+.profile-hero::before{content:'';position:absolute;top:-80px;left:-80px;width:260px;height:260px;background:radial-gradient(circle,rgba(99,102,241,.12),transparent 70%);pointer-events:none;}
+.ph-av{width:80px;height:80px;border-radius:22px;margin:0 auto 14px;border:3px solid var(--border2);overflow:hidden;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:2rem;box-shadow:0 8px 24px rgba(0,0,0,.4),var(--glow-p);}
+.ph-av img{width:100%;height:100%;object-fit:cover;}
+.ph-name{font-size:1.4rem;font-weight:900;margin-bottom:3px;}
+.ph-title{color:var(--v);font-size:.82rem;margin-bottom:8px;}
+.ph-pts{font-family:var(--font-en);font-size:1.5rem;font-weight:900;color:var(--gold2);margin-bottom:8px;}
+.ph-since{color:var(--tx3);font-size:.74rem;margin-bottom:14px;}
+.ph-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px;}
 
-/* Rank display */
-.rank-hero {
-    display:inline-flex;align-items:center;gap:8px;
-    border-radius:12px;padding:7px 16px;font-size:.9rem;font-weight:700;
-    border:1px solid;margin-top:10px;
-}
-
-/* XP Bar */
-.xp-section { margin-top:12px; }
-.xp-label { font-size:.78rem;color:var(--muted);margin-bottom:4px; }
-.xp-bar-wrap { background:var(--surface);border-radius:8px;height:8px;overflow:hidden;max-width:220px;margin:0 auto; }
-.xp-bar-fill { height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .8s; }
-
-/* Stats */
-.stats-row { display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px; }
-.stat-box { background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center; }
-.stat-box .num { font-size:1.7rem;font-weight:900;color:var(--accent); }
-.stat-box .lbl { font-size:.78rem;color:var(--muted);margin-top:3px; }
+/* Stats Grid */
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:18px 14px;text-align:center;}
+.stat-val{font-family:var(--font-en);font-size:1.6rem;font-weight:900;background:linear-gradient(135deg,var(--p2),var(--v));-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;margin-bottom:5px;}
+.stat-lab{font-size:.7rem;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:1px;}
 
 /* Streak */
-.streak-box { background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:12px;
-              padding:12px;text-align:center;margin-bottom:16px; }
-.streak-box .s-num { font-size:1.5rem;font-weight:900;color:#fca5a5; }
-.streak-box .s-lbl { color:var(--muted);font-size:.8rem; }
+.streak-banner{background:linear-gradient(135deg,rgba(244,63,94,.08),rgba(245,158,11,.05));border:1px solid rgba(244,63,94,.2);border-radius:var(--r2);padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px;}
+.streak-num{font-family:var(--font-en);font-size:2rem;font-weight:900;color:var(--rose);line-height:1;}
+.streak-info {}
+.streak-title{font-weight:800;font-size:.92rem;margin-bottom:2px;}
+.streak-sub{font-size:.76rem;color:var(--tx3);}
 
 /* Achievements */
-.ach-grid { display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px; }
-.ach-badge {
-    background:var(--card);border:1px solid var(--border);
-    border-radius:10px;padding:9px 13px;
-    display:flex;align-items:center;gap:7px;font-size:.85rem;
-}
-.ach-badge .ach-icon { font-size:1.2rem; }
-.ach-badge .ach-name { font-weight:700; }
-.ach-badge .ach-desc { color:var(--muted);font-size:.75rem; }
-
-/* Upload */
-.upload-area {
-    border:2px dashed var(--border);border-radius:12px;padding:18px;
-    text-align:center;cursor:pointer;transition:.2s;margin-bottom:14px;
-}
-.upload-area:hover { border-color:var(--accent); }
+.ach-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.ach-badge{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:8px 14px;font-size:.82rem;}
+.ach-icon{font-size:1.1rem;}
+.ach-name{font-weight:700;font-size:.82rem;}
+.ach-desc{font-size:.7rem;color:var(--tx3);}
 
 /* Matches */
-.match-row { display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border-bottom:1px solid var(--border); }
-.match-row:last-child { border-bottom:none; }
-.match-vs  { font-weight:700;font-size:.9rem; }
-.match-sub { color:var(--muted);font-size:.76rem;margin-top:2px; }
-.badge-win  { background:rgba(16,185,129,.18);color:#6ee7b7;border-radius:7px;padding:3px 9px;font-size:.78rem;font-weight:700; }
-.badge-lose { background:rgba(239,68,68,.14);color:#fca5a5;border-radius:7px;padding:3px 9px;font-size:.78rem;font-weight:700; }
-.badge-bot  { background:rgba(100,116,139,.2);color:#94a3b8;border-radius:7px;padding:3px 9px;font-size:.78rem; }
+.match-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:16px;margin-bottom:10px;position:relative;}
+.match-card::before{content:'';position:absolute;top:0;right:0;bottom:0;width:4px;border-radius:0 var(--r2) var(--r2) 0;}
+.match-win::before{background:linear-gradient(to bottom,var(--emerald),var(--teal));}
+.match-loss::before{background:linear-gradient(to bottom,var(--rose),#be123c);}
+.match-opp{font-weight:700;font-size:.9rem;margin-bottom:4px;}
+.match-meta{font-size:.74rem;color:var(--tx3);margin-bottom:8px;}
+.match-result{display:inline-flex;align-items:center;gap:6px;padding:3px 12px;border-radius:8px;font-size:.78rem;font-weight:700;}
+.res-win{background:rgba(16,185,129,.12);color:var(--emerald);border:1px solid rgba(16,185,129,.25);}
+.res-loss{background:rgba(244,63,94,.1);color:#fda4af;border:1px solid rgba(244,63,94,.2);}
 
-/* Replay button */
-.replay-btn {
-    background:none;border:none;color:var(--muted);font-size:.72rem;
-    cursor:pointer;text-decoration:underline;font-family:'Cairo',sans-serif;
-    padding:0;margin-top:2px;
-}
-.replay-modal { display:none; }
-.rank-next { color: var(--muted); font-size:.75rem; margin-right:6px; }
+/* Avatar upload */
+.avatar-upload{background:var(--card);border:1px dashed var(--border2);border-radius:var(--r2);padding:22px;text-align:center;margin-bottom:16px;cursor:pointer;transition:all .2s;}
+.avatar-upload:hover{border-color:var(--p);background:rgba(99,102,241,.04);}
 </style>
 {% endblock %}
-
 {% block content %}
-{% set r = target.rank %}
-
 <div id="profile-data" data-is-me="{{ '1' if is_me else '0' }}" style="display:none"></div>
-<div class="profile-hero">
-    {% if target.avatar %}
-        <img src="/static/avatars/{{ target.avatar }}" class="avatar-lg" alt="">
-    {% else %}
-        <div class="avatar-ph">👤</div>
-    {% endif %}
-
-    <div class="profile-name">{{ target.player_name }}</div>
-    {% if title %}
-        <div class="profile-title">{{ title }}</div>
-    {% endif %}
-    <div class="profile-pts">💰 {{ target.points }} نقطة</div>
-    <div class="profile-since">عضو منذ {{ target.created_at.strftime('%Y/%m/%d') }}</div>
-
-    <!-- أزرار التفاعل مع اللاعب -->
-    {% if not is_me %}
-    <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap">
-        {% if friendship_status == 'accepted' %}
-            <a href="/chat/{{ target.id }}" class="btn btn-primary" style="padding:8px 20px">
-                💬 شات
-            </a>
-            <button onclick="removeFriendProfile({{ target.id }})" class="btn btn-ghost" style="padding:8px 16px;font-size:.85rem">
-                حذف صديق
-            </button>
-        {% elif friendship_status == 'pending_sent' %}
-            <span style="color:var(--muted);font-size:.88rem;padding:8px">⏳ تم إرسال طلب صداقة</span>
-            <button onclick="cancelRequest({{ target.id }})" class="btn btn-ghost" style="padding:8px 14px;font-size:.82rem">إلغاء</button>
-        {% elif friendship_status == 'pending_received' %}
-            <button onclick="acceptFriendProfile({{ target.id }})" class="btn btn-green" style="padding:8px 20px">
-                ✓ قبول طلب الصداقة
-            </button>
-            <button onclick="cancelRequest({{ target.id }})" class="btn btn-ghost" style="padding:8px 14px;font-size:.82rem">رفض</button>
-        {% else %}
-            <button onclick="addFriendProfile({{ target.id }}, this)" class="btn btn-primary" style="padding:8px 20px">
-                👥 إضافة صديق
-            </button>
+<div class="profile-wrap">
+    <div class="profile-hero">
+        <div class="ph-av">
+            {% if target.avatar %}<img src="/static/avatars/{{ target.avatar }}">{% else %}👤{% endif %}
+        </div>
+        <div class="ph-name">{{ target.player_name }}</div>
+        {% if title %}<div class="ph-title">{{ title }}</div>{% endif %}
+        <div class="ph-pts">{{ target.points }} <span style="font-size:.8rem;font-weight:400;color:var(--tx3)">pts</span></div>
+        {% set r = target.rank %}
+        <span class="rank-pill" style="border-color:{{ r.color }}40;color:{{ r.color }};background:{{ r.color }}15">{{ r.icon }} {{ r.name }}</span>
+        <div class="ph-since">عضو منذ {{ target.created_at.strftime('%Y/%m/%d') }}</div>
+        <div>
+            <div style="font-size:.72rem;color:var(--tx3);margin-bottom:5px;font-family:var(--font-en)">Level {{ target.level }} — {{ target.xp_progress }}/100 XP</div>
+            <div class="xp-bar-wrap" style="max-width:200px;margin:0 auto">
+                <div class="xp-bar-fill" style="width:{{ target.xp_progress }}%"></div>
+            </div>
+        </div>
+        <!-- Friend/Chat actions -->
+        {% if not is_me %}
+        <div class="ph-actions">
+            {% if friendship_status == 'accepted' %}
+                <a href="/chat/{{ target.id }}" class="btn btn-primary btn-sm">💬 شات</a>
+                <button onclick="removeFriendProfile({{ target.id }})" class="btn btn-ghost btn-sm">حذف صديق</button>
+            {% elif friendship_status == 'pending_sent' %}
+                <span style="color:var(--tx3);font-size:.82rem;padding:8px">⏳ تم إرسال طلب</span>
+                <button onclick="cancelRequest({{ target.id }})" class="btn btn-ghost btn-sm">إلغاء</button>
+            {% elif friendship_status == 'pending_received' %}
+                <button onclick="acceptFriendProfile({{ target.id }})" class="btn btn-teal btn-sm">✓ قبول طلب الصداقة</button>
+                <button onclick="cancelRequest({{ target.id }})" class="btn btn-ghost btn-sm">رفض</button>
+            {% else %}
+                <button onclick="addFriendProfile({{ target.id }},this)" class="btn btn-primary btn-sm">👥 إضافة صديق</button>
+            {% endif %}
+        </div>
         {% endif %}
     </div>
-    {% endif %}
 
-    <!-- م1: Rank -->
-    <div>
-        <span class="rank-hero" data-rank-color="{{ r.color }}">
-            {{ r.icon }} {{ r.name }}
-            {% if r.next %}<span class="rank-next">← {{ r.next_pts }} للـ{{ r.next }}</span>{% endif %}
-        </span>
-    </div>
-
-    <!-- م12: XP -->
-    <div class="xp-section">
-        <div class="xp-label">Level {{ target.level }} — {{ target.xp_progress }}/100 XP</div>
-        <div class="xp-bar-wrap">
-            <div class="xp-bar-fill" style="width:{{ target.xp_progress }}%"></div>
-        </div>
-    </div>
-</div>
-
-<div class="container">
     <!-- Stats -->
-    <div class="stats-row" style="margin-top:20px">
-        <div class="stat-box">
-            <div class="num">{{ stats.total }}</div>
-            <div class="lbl">مباريات</div>
-        </div>
-        <div class="stat-box">
-            <div class="num" style="color:var(--green)">{{ stats.wins }}</div>
-            <div class="lbl">انتصارات</div>
-        </div>
-        <div class="stat-box">
-            <div class="num">{{ stats.win_rate }}%</div>
-            <div class="lbl">معدل الفوز</div>
-        </div>
+    <div class="stats-grid">
+        <div class="stat-card"><div class="stat-val">{{ stats.win_rate }}%</div><div class="stat-lab">معدل الفوز</div></div>
+        <div class="stat-card"><div class="stat-val">{{ stats.wins }}</div><div class="stat-lab">انتصارات</div></div>
+        <div class="stat-card"><div class="stat-val">{{ stats.total }}</div><div class="stat-lab">مباريات</div></div>
     </div>
 
-    <!-- م4: Streak -->
+    <!-- Streak -->
     {% if target.win_streak and target.win_streak >= 2 %}
-    <div class="streak-box">
-        <div class="s-num">🔥 {{ target.win_streak }} انتصارات ورا بعض</div>
-        <div class="s-lbl">أحسن streak: {{ target.best_streak }}</div>
+    <div class="streak-banner">
+        <div class="streak-num">{{ target.win_streak }} 🔥</div>
+        <div class="streak-info">
+            <div class="streak-title">{{ target.win_streak }} انتصارات ورا بعض</div>
+            <div class="streak-sub">أحسن streak: {{ target.best_streak }}</div>
+        </div>
     </div>
     {% endif %}
 
     <!-- Achievements -->
     {% if achievements %}
-    <div style="font-weight:700;font-size:.92rem;margin-bottom:10px">🏅 الإنجازات</div>
+    <div class="card-title" style="margin-bottom:10px">🏅 الإنجازات</div>
     <div class="ach-grid">
         {% for a in achievements %}
         <div class="ach-badge">
-            <span class="ach-icon">{{ a.icon or '🏅' }}</span>
-            <div>
-                <div class="ach-name">{{ a.name }}</div>
-                <div class="ach-desc">{{ a.desc }}</div>
-            </div>
+            <span class="ach-icon">{{ a.icon }}</span>
+            <div><div class="ach-name">{{ a.name }}</div><div class="ach-desc">{{ a.desc }}</div></div>
         </div>
         {% endfor %}
     </div>
     {% endif %}
 
-    <!-- رفع أفاتار -->
+    <!-- Avatar Upload (own profile) -->
     {% if is_me %}
-    <div class="card">
-        <div class="card-title">🖼️ تغيير الصورة الشخصية</div>
-        <div class="upload-area" onclick="document.getElementById('avatarFile').click()">
-            <div style="font-size:2rem;margin-bottom:6px">📷</div>
-            <div style="font-weight:700">اضغط لاختيار صورة</div>
-            <div style="color:var(--muted);font-size:.78rem;margin-top:3px">PNG / JPG / GIF — أقصى 2MB</div>
-        </div>
+    <div class="avatar-upload" onclick="document.getElementById('avatarFile').click()">
+        <span style="font-size:1.5rem;display:block;margin-bottom:6px">📸</span>
+        <div style="font-weight:700;font-size:.88rem;margin-bottom:3px">تغيير الصورة الشخصية</div>
+        <div style="font-size:.74rem;color:var(--tx3)">PNG · JPG · GIF · WebP (ماكس 2MB)</div>
         <input type="file" id="avatarFile" accept="image/*" style="display:none" onchange="uploadAvatar(this)">
-        <div id="avatarMsg" style="display:none"></div>
+        <div id="avatarProgress" style="display:none;margin-top:10px">
+            <div style="height:4px;background:var(--surface);border-radius:4px;overflow:hidden">
+                <div id="avatarBar" style="height:100%;background:linear-gradient(90deg,var(--p),var(--v));width:0%;transition:width .3s;border-radius:4px"></div>
+            </div>
+        </div>
     </div>
     {% endif %}
 
-    <!-- Matches -->
-    <div class="card">
-        <div class="card-title">📋 آخر المباريات</div>
-        {% if matches %}
-        {% for m in matches %}
-        {% set won = m.winner_id == target.id %}
-        <div class="match-row">
+    <!-- Match History -->
+    <div class="card-title" style="margin-bottom:12px">📋 آخر المباريات</div>
+    {% for m in matches %}
+    {% set won = m.winner_id == target.id %}
+    {% set opp = m.player2 if m.player1_id == target.id else m.player1 %}
+    <div class="match-card {% if won %}match-win{% else %}match-loss{% endif %}">
+        <div style="display:flex;align-items:center;justify-content:space-between">
             <div>
-                <div class="match-vs">
-                    {% if m.is_bot %}🤖 ضد الكمبيوتر
-                    {% elif m.player1_id == target.id %}
-                        ضد {% if m.player2 %}{{ m.player2.player_name }}{% else %}لاعب محذوف{% endif %}
-                    {% else %}
-                        ضد {% if m.player1 %}{{ m.player1.player_name }}{% else %}لاعب محذوف{% endif %}
-                    {% endif %}
-                </div>
-                <div class="match-sub">
-                    {{ m.created_at.strftime('%d/%m %H:%M') }}
-                    {% if not m.is_bot %} · {{ m.bet }} نقطة{% endif %}
-                    · {{ m.guesses }} محاولة
-                </div>
-                <!-- م8: Replay -->
-                {% if m.guess_log %}
-                <button class="replay-btn" data-match-id="{{ m.id }}" onclick="showReplay(this.dataset.matchId, this)">▶ عرض التخمينات</button>
-                <div id="replay-{{ m.id }}" class="replay-modal" style="margin-top:6px;font-size:.78rem;color:var(--muted)"></div>
-                {% endif %}
+                <div class="match-opp">ضد {% if opp %}{{ opp.player_name }}{% else %}بوت{% endif %}</div>
+                <div class="match-meta">{{ m.created_at.strftime('%d/%m · %H:%M') }} · {{ m.guesses }} محاولة · {{ m.bet }} نقطة</div>
             </div>
-            <div>
-                {% if m.is_bot %}<span class="badge-bot">بوت 🤖</span>
-                {% elif won %}<span class="badge-win">فوز +{{ m.bet }}</span>
-                {% else %}<span class="badge-lose">خسارة -{{ m.bet }}</span>
+            <div style="display:flex;align-items:center;gap:8px">
+                <span class="match-result {% if won %}res-win{% else %}res-loss{% endif %}">{% if won %}فوز +{{ m.bet }}{% else %}خسارة -{{ m.bet }}{% endif %}</span>
+                {% if m.guess_log %}
+                <button onclick="toggleReplay({{ m.id }},this)" class="btn btn-ghost btn-xs">🎬 replay</button>
                 {% endif %}
             </div>
         </div>
-        {% endfor %}
-        {% else %}
-        <div style="text-align:center;color:var(--muted);padding:24px">لسه ماليعبتش مباريات 🎮</div>
+        {% if m.guess_log %}
+        <div id="replay-{{ m.id }}" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+            <div style="font-size:.7rem;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">سجل التخمينات</div>
+            <div style="display:flex;flex-wrap:wrap;gap:5px">
+                {% set log = m.guess_log | tojson | safe %}
+            </div>
+        </div>
         {% endif %}
     </div>
+    {% else %}
+    <div style="text-align:center;color:var(--tx3);padding:32px;background:var(--card);border:1px dashed var(--border);border-radius:var(--r2)">
+        لا توجد مباريات بعد
+    </div>
+    {% endfor %}
 </div>
 {% endblock %}
-
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('[data-rank-color]').forEach(function(el) {
-        var c = el.dataset.rankColor;
-        el.style.color        = c;
-        el.style.borderColor  = c + '44';
-        el.style.background   = c + '18';
-    });
-});
-
-var IS_ME = document.getElementById('profile-data').dataset.isMe === '1';
-
-// م8: Replay
-async function showReplay(matchId, btn) {
-    var container = document.getElementById('replay-' + matchId);
-    if (container.style.display === 'block') {
-        container.style.display = 'none';
-        btn.textContent = '▶ عرض التخمينات';
-        return;
-    }
-    btn.textContent = '⏳ جاري التحميل...';
-    var res  = await fetch('/api/match/' + matchId + '/replay');
-    var data = await res.json();
-    var icons = {higher: '⬆️', lower: '⬇️', correct: '✅'};
-    if (!data.log || !data.log.length) {
-        container.textContent = 'مفيش بيانات';
-    } else {
-        var html = '';
-        for (var i = 0; i < data.log.length; i++) {
-            var e = data.log[i];
-            var icon = icons[e.result] || '';
-            html += '<div style="padding:2px 0">#' + (i+1) + ' <strong>' + e.guesser + '</strong> خمّن <strong>' + e.guess + '</strong> ' + icon + '</div>';
-        }
-        container.innerHTML = html;
-    }
-    container.style.display = 'block';
-    btn.textContent = '▲ إخفاء';
+function toggleReplay(id,btn){
+    var el=document.getElementById('replay-'+id);
+    if(el.style.display==='none'){
+        el.style.display='block';btn.textContent='✕ إخفاء';
+        // render replay
+        fetch('/api/match/'+id+'/replay').then(function(r){return r.json();}).then(function(d){
+            var c=el.querySelector('div:last-child');c.innerHTML='';
+            if(d.replay){d.replay.forEach(function(e){
+                var s=document.createElement('span');
+                var r=e.result||'miss';
+                var col=r==='correct'?'rgba(16,185,129,.15)':r==='higher'?'rgba(99,102,241,.12)':'rgba(245,158,11,.1)';
+                var tc=r==='correct'?'#6ee7b7':r==='higher'?'#a5b4fc':'#fcd34d';
+                s.style.cssText='background:'+col+';color:'+tc+';padding:3px 10px;border-radius:7px;font-family:var(--font-en);font-size:.78rem;font-weight:700';
+                s.textContent=(r==='correct'?'✅':r==='higher'?'⬆️':'⬇️')+' '+e.guess;
+                c.appendChild(s);
+            });}
+        });
+    }else{el.style.display='none';btn.textContent='🎬 replay';}
 }
 
-async function addFriendProfile(pid, btn) {
-    btn.disabled = true; btn.textContent = 'جاري...';
-    var res = await fetch('/friends/request/'+pid, {method:'POST'});
-    var d   = await res.json();
-    if(d.ok) { btn.textContent = '⏳ تم الإرسال'; btn.className = 'btn btn-ghost'; }
-    else { btn.disabled=false; btn.textContent='👥 إضافة صديق'; showToast('⚠️ '+d.error); }
-}
-async function acceptFriendProfile(pid) {
-    var res = await fetch('/friends/accept/'+pid, {method:'POST'});
-    var d   = await res.json();
-    if(d.ok) { showToast('✅ أصبحتم أصدقاء!'); setTimeout(function(){location.reload();},800); }
-}
-async function cancelRequest(pid) {
-    await fetch('/friends/reject/'+pid, {method:'POST'});
-    showToast('تم'); setTimeout(function(){location.reload();},600);
-}
-async function removeFriendProfile(pid) {
-    if(!confirm('تأكيد حذف الصديق؟')) return;
-    await fetch('/friends/remove/'+pid, {method:'POST'});
-    showToast('تم الحذف'); setTimeout(function(){location.reload();},600);
-}
+{% if not is_me %}
+async function addFriendProfile(pid,btn){btn.disabled=true;btn.textContent='...';var r=await fetch('/friends/request/'+pid,{method:'POST'});var d=await r.json();if(d.ok){btn.textContent='⏳ تم الإرسال';btn.className='btn btn-ghost btn-sm';}else{btn.disabled=false;btn.textContent='👥 إضافة صديق';showToast('⚠️ '+d.error);}}
+async function acceptFriendProfile(pid){var r=await fetch('/friends/accept/'+pid,{method:'POST'});if((await r.json()).ok){showToast('✅ أصبحتم أصدقاء!');setTimeout(function(){location.reload();},700);}}
+async function cancelRequest(pid){await fetch('/friends/reject/'+pid,{method:'POST'});showToast('تم');setTimeout(function(){location.reload();},600);}
+async function removeFriendProfile(pid){if(!confirm('تأكيد حذف الصديق؟'))return;await fetch('/friends/remove/'+pid,{method:'POST'});showToast('تم الحذف');setTimeout(function(){location.reload();},600);}
+{% endif %}
 
-async function uploadAvatar(input) {
-    if (!IS_ME) return;
-    var file = input.files[0];
-    if (!file) return;
-    var msg = document.getElementById('avatarMsg');
-    msg.style.display = 'block';
-    msg.textContent   = '⏳ جاري الرفع...';
-    var form = new FormData();
-    form.append('avatar', file);
-    var res  = await fetch('/upload_avatar', {method: 'POST', body: form});
-    var data = await res.json();
-    if (data.ok) {
-        msg.textContent = '✅ تم تحديث الصورة!';
-        setTimeout(function() { location.reload(); }, 700);
-    } else {
-        msg.textContent = '⚠️ ' + data.error;
-    }
+{% if is_me %}
+async function uploadAvatar(input){
+    if(!input.files||!input.files[0])return;
+    document.getElementById('avatarProgress').style.display='block';
+    var bar=document.getElementById('avatarBar');bar.style.width='0%';
+    var f=new FormData();f.append('avatar',input.files[0]);
+    var xhr=new XMLHttpRequest();
+    xhr.upload.onprogress=function(e){if(e.lengthComputable)bar.style.width=Math.round(e.loaded/e.total*100)+'%';};
+    xhr.onload=function(){
+        var d=JSON.parse(xhr.responseText);
+        if(d.ok){showToast('✅ تم تحديث الصورة!');setTimeout(function(){location.reload();},800);}
+        else{showToast('⚠️ '+d.error);document.getElementById('avatarProgress').style.display='none';}
+    };
+    xhr.open('POST','/upload_avatar');xhr.send(f);
 }
+{% endif %}
 </script>
 {% endblock %}

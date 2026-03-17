@@ -3,281 +3,572 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{% block title %}Guess Up{% endblock %}</title>
+
     <!-- PWA -->
     <link rel="manifest" href="/static/manifest.json">
-    <meta name="theme-color" content="#7c3aed">
+    <meta name="theme-color" content="#6366f1">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Guess Up">
     <link rel="apple-touch-icon" href="/static/icons/icon-152x152.png">
     <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
-    <title>{% block title %}Guess Up 🎯{% endblock %}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+
+    <!-- CrazyGames SDK -->
+    <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+
+    <!-- Fonts: Tajawal للعربي + Outfit للأرقام والإنجليزي -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+    /* ══════════════════════════════════════════════════
+       DESIGN SYSTEM — GUESS UP PREMIUM
+    ══════════════════════════════════════════════════ */
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
-        :root {
-            --bg: #0a0a0f;
-            --surface: #12121a;
-            --card: #1a1a26;
-            --border: #2a2a3a;
-            --accent: #7c3aed;
-            --accent2: #f59e0b;
-            --green: #10b981;
-            --red: #ef4444;
-            --text: #e2e8f0;
-            --muted: #64748b;
-            --glow: 0 0 20px rgba(124,58,237,0.4);
-        }
+    :root {
+        /* Core Palette — Deep Space */
+        --bg:        #07070f;
+        --bg2:       #0d0d1a;
+        --surface:   #111120;
+        --card:      #161628;
+        --card2:     #1c1c36;
+        --glass:     rgba(22,22,40,0.7);
 
-        body {
-            font-family: 'Cairo', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            background-image:
-                radial-gradient(ellipse at 20% 20%, rgba(124,58,237,0.08) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 80%, rgba(245,158,11,0.05) 0%, transparent 50%);
-        }
+        /* Borders */
+        --border:    rgba(99,102,241,0.12);
+        --border2:   rgba(99,102,241,0.25);
+        --border3:   rgba(99,102,241,0.45);
 
-        nav {
-            background: var(--surface);
-            border-bottom: 1px solid var(--border);
-            padding: 14px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        /* Brand — Indigo to Violet */
+        --p:         #6366f1;   /* primary */
+        --p2:        #818cf8;   /* primary light */
+        --p3:        #4f46e5;   /* primary dark */
+        --v:         #a78bfa;   /* violet accent */
 
-        .nav-logo {
-            font-size: 1.5rem;
-            font-weight: 900;
-            background: linear-gradient(135deg, var(--accent), var(--accent2));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-decoration: none;
-        }
+        /* Accents */
+        --gold:      #f59e0b;
+        --gold2:     #fbbf24;
+        --teal:      #14b8a6;
+        --rose:      #f43f5e;
+        --emerald:   #10b981;
 
-        .nav-info {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            font-size: 0.9rem;
-        }
+        /* Text */
+        --tx:        #f1f5f9;
+        --tx2:       #94a3b8;
+        --tx3:       #475569;
 
-        .points-badge {
-            background: linear-gradient(135deg, var(--accent), #5b21b6);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-weight: 700;
-            font-size: 0.9rem;
-        }
+        /* Glow Effects */
+        --glow-p:    0 0 30px rgba(99,102,241,0.35);
+        --glow-gold: 0 0 20px rgba(245,158,11,0.3);
+        --glow-teal: 0 0 20px rgba(20,184,166,0.3);
 
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 32px 16px;
-        }
+        /* Radii */
+        --r:   10px;
+        --r2:  16px;
+        --r3:  24px;
 
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 28px;
-            margin-bottom: 20px;
-        }
+        /* Typography */
+        --font-ar: 'Tajawal', sans-serif;
+        --font-en: 'Outfit', sans-serif;
+    }
 
-        .card-title {
-            font-size: 1.4rem;
-            font-weight: 700;
-            margin-bottom: 20px;
-            color: var(--text);
-        }
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width:5px; height:5px; }
+    ::-webkit-scrollbar-track { background: var(--bg2); }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius:3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--p); }
 
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 12px 24px;
-            border-radius: 10px;
-            font-family: 'Cairo', sans-serif;
-            font-size: 1rem;
-            font-weight: 700;
-            cursor: pointer;
-            border: none;
-            transition: all 0.2s;
-            text-decoration: none;
-        }
+    /* ── Base ── */
+    html { scroll-behavior: smooth; }
 
-        .btn-primary {
-            background: linear-gradient(135deg, var(--accent), #5b21b6);
-            color: white;
-            box-shadow: var(--glow);
-        }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 30px rgba(124,58,237,0.6); }
+    body {
+        font-family: var(--font-ar);
+        background: var(--bg);
+        color: var(--tx);
+        min-height: 100vh;
+        line-height: 1.7;
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+        /* Noise texture للعمق */
+        background-image:
+            url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E"),
+            radial-gradient(ellipse 80% 60% at 10% 0%, rgba(99,102,241,0.06) 0%, transparent 60%),
+            radial-gradient(ellipse 60% 50% at 90% 100%, rgba(167,139,250,0.04) 0%, transparent 60%);
+    }
 
-        .btn-gold {
-            background: linear-gradient(135deg, var(--accent2), #d97706);
-            color: white;
-        }
-        .btn-gold:hover { transform: translateY(-2px); }
+    /* ══ NAV ══════════════════════════════════════════ */
+    nav {
+        background: rgba(7,7,15,0.85);
+        border-bottom: 1px solid var(--border);
+        padding: 0 20px;
+        height: 56px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        z-index: 300;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
 
-        .btn-green {
-            background: linear-gradient(135deg, var(--green), #059669);
-            color: white;
-        }
+    .nav-logo {
+        font-family: var(--font-en);
+        font-size: 1.25rem;
+        font-weight: 900;
+        letter-spacing: -0.5px;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--tx);
+    }
+    .nav-logo .logo-icon {
+        width: 28px; height: 28px;
+        background: linear-gradient(135deg, var(--p), var(--v));
+        border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: .85rem;
+        box-shadow: var(--glow-p);
+    }
+    .nav-logo .logo-text { color: var(--p2); }
 
-        .btn-danger {
-            background: linear-gradient(135deg, var(--red), #b91c1c);
-            color: white;
-        }
+    .nav-right {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
 
-        .btn-ghost {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text);
-        }
-        .btn-ghost:hover { background: var(--surface); }
+    .nav-pts {
+        background: linear-gradient(135deg, rgba(99,102,241,.2), rgba(167,139,250,.1));
+        border: 1px solid var(--border2);
+        border-radius: 20px;
+        padding: 4px 12px;
+        font-family: var(--font-en);
+        font-weight: 700;
+        font-size: .82rem;
+        color: var(--gold2);
+        letter-spacing: .3px;
+    }
 
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+    .nav-link {
+        width: 36px; height: 36px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        display: flex; align-items: center; justify-content: center;
+        font-size: .95rem;
+        text-decoration: none;
+        color: var(--tx2);
+        transition: all .2s;
+        position: relative;
+        cursor: pointer;
+    }
+    .nav-link:hover { border-color: var(--border2); color: var(--tx); background: var(--card2); }
 
-        .input {
-            width: 100%;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 12px 16px;
-            color: var(--text);
-            font-family: 'Cairo', sans-serif;
-            font-size: 1rem;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-        .input:focus { border-color: var(--accent); }
+    #notif-badge {
+        position: absolute; top: -4px; right: -4px;
+        background: var(--rose);
+        color: #fff;
+        border-radius: 50%;
+        width: 16px; height: 16px;
+        font-size: .58rem;
+        font-family: var(--font-en);
+        font-weight: 900;
+        display: none;
+        align-items: center; justify-content: center;
+        border: 2px solid var(--bg);
+    }
 
-        .alert {
-            padding: 14px 18px;
-            border-radius: 10px;
-            margin-bottom: 16px;
-            font-weight: 600;
-        }
-        .alert-error { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
-        .alert-success { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #6ee7b7; }
-        .alert-info { background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.3); color: #c4b5fd; }
+    .nav-name {
+        font-size: .8rem;
+        color: var(--tx2);
+        text-decoration: none;
+        padding: 4px 8px;
+        border-radius: 8px;
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        transition: color .15s;
+    }
+    .nav-name:hover { color: var(--tx); }
 
-        /* Modal */
-        .modal-overlay {
-            position: fixed; inset: 0;
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(4px);
-            display: flex; align-items: center; justify-content: center;
-            z-index: 1000;
-        }
-        .modal {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 36px;
-            max-width: 480px;
-            width: 90%;
-            text-align: center;
-            animation: popIn 0.3s ease;
-        }
-        @keyframes popIn {
-            from { transform: scale(0.8); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
+    .btn-logout {
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--tx3);
+        width: 36px; height: 36px;
+        border-radius: 10px;
+        font-size: .85rem;
+        cursor: pointer;
+        transition: all .2s;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .btn-logout:hover { border-color: var(--rose); color: var(--rose); }
 
-        .hidden { display: none !important; }
+    /* ══ LAYOUT ══════════════════════════════════════ */
+    .container {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 24px 16px;
+    }
 
-        /* Toast */
-        .toast {
-            position: fixed;
-            bottom: 24px; left: 50%;
-            transform: translateX(-50%);
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 14px 24px;
-            font-weight: 600;
-            z-index: 2000;
-            animation: slideUp 0.3s ease;
-        }
-        @keyframes slideUp {
-            from { transform: translateX(-50%) translateY(20px); opacity: 0; }
-            to { transform: translateX(-50%) translateY(0); opacity: 1; }
-        }
-    </style>
+    /* ══ CARD ═════════════════════════════════════════ */
+    .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--r2);
+        padding: 20px;
+        margin-bottom: 14px;
+        position: relative;
+        overflow: hidden;
+    }
+    .card::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(99,102,241,0.03) 0%, transparent 60%);
+        pointer-events: none;
+    }
+    .card-title {
+        font-size: .72rem;
+        font-weight: 700;
+        color: var(--tx3);
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        margin-bottom: 14px;
+    }
+
+    /* ══ BUTTONS ══════════════════════════════════════ */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        padding: 10px 22px;
+        border-radius: var(--r);
+        font-family: var(--font-ar);
+        font-size: .9rem;
+        font-weight: 700;
+        cursor: pointer;
+        border: none;
+        text-decoration: none;
+        transition: all .18s cubic-bezier(0.4,0,0.2,1);
+        -webkit-tap-highlight-color: transparent;
+        position: relative;
+        overflow: hidden;
+        white-space: nowrap;
+        letter-spacing: .2px;
+    }
+    .btn::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(rgba(255,255,255,.07), transparent);
+        pointer-events: none;
+    }
+    .btn:active { transform: scale(.96); }
+    .btn:disabled { opacity: .35; cursor: not-allowed; transform: none !important; }
+
+    .btn-primary {
+        background: linear-gradient(135deg, var(--p), var(--p3));
+        color: #fff;
+        box-shadow: 0 4px 14px rgba(99,102,241,.35), inset 0 1px 0 rgba(255,255,255,.1);
+    }
+    .btn-primary:hover { box-shadow: 0 6px 20px rgba(99,102,241,.5); transform: translateY(-1px); }
+
+    .btn-gold {
+        background: linear-gradient(135deg, var(--gold), #d97706);
+        color: #fff;
+        box-shadow: 0 4px 14px rgba(245,158,11,.3);
+    }
+    .btn-gold:hover { box-shadow: 0 6px 20px rgba(245,158,11,.45); transform: translateY(-1px); }
+
+    .btn-teal {
+        background: linear-gradient(135deg, var(--teal), #0d9488);
+        color: #fff;
+        box-shadow: 0 4px 14px rgba(20,184,166,.3);
+    }
+    .btn-teal:hover { box-shadow: 0 6px 20px rgba(20,184,166,.45); transform: translateY(-1px); }
+
+    .btn-danger {
+        background: linear-gradient(135deg, var(--rose), #be123c);
+        color: #fff;
+        box-shadow: 0 4px 14px rgba(244,63,94,.3);
+    }
+    .btn-danger:hover { box-shadow: 0 6px 20px rgba(244,63,94,.45); transform: translateY(-1px); }
+
+    .btn-ghost {
+        background: var(--card2);
+        color: var(--tx2);
+        border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { border-color: var(--border2); color: var(--tx); background: var(--card); }
+
+    .btn-sm { padding: 6px 14px; font-size: .8rem; border-radius: 8px; }
+    .btn-xs { padding: 4px 10px; font-size: .75rem; border-radius: 7px; }
+
+    /* ══ INPUT ════════════════════════════════════════ */
+    .input {
+        width: 100%;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: 11px 14px;
+        color: var(--tx);
+        font-family: var(--font-ar);
+        font-size: .95rem;
+        outline: none;
+        transition: border-color .15s, box-shadow .15s;
+        line-height: 1;
+    }
+    .input:focus {
+        border-color: var(--p);
+        box-shadow: 0 0 0 3px rgba(99,102,241,.15);
+    }
+    .input::placeholder { color: var(--tx3); }
+
+    /* ══ ALERTS ═══════════════════════════════════════ */
+    .alert {
+        padding: 10px 14px;
+        border-radius: var(--r);
+        font-size: .86rem;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .alert-error   { background:rgba(244,63,94,.08);   color:#fda4af; border:1px solid rgba(244,63,94,.2);  }
+    .alert-info    { background:rgba(99,102,241,.08);   color:#a5b4fc; border:1px solid rgba(99,102,241,.2); }
+    .alert-success { background:rgba(16,185,129,.08);  color:#6ee7b7; border:1px solid rgba(16,185,129,.2); }
+    .alert-warn    { background:rgba(245,158,11,.08);   color:#fcd34d; border:1px solid rgba(245,158,11,.2); }
+    .hidden { display: none !important; }
+
+    /* ══ MODAL ════════════════════════════════════════ */
+    .modal-overlay {
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,.75);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        display: flex; align-items: center; justify-content: center;
+        z-index: 500; padding: 16px;
+        animation: fadeIn .2s ease;
+    }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+    .modal {
+        background: var(--card);
+        border: 1px solid var(--border2);
+        border-radius: var(--r3);
+        padding: 28px;
+        width: 100%; max-width: 420px;
+        max-height: 92vh; overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0,0,0,.6), var(--glow-p);
+        animation: slideUp .25s cubic-bezier(0.175,0.885,0.32,1.275);
+        position: relative;
+    }
+    @keyframes slideUp { from{transform:translateY(20px) scale(.97);opacity:0} to{transform:translateY(0) scale(1);opacity:1} }
+
+    .modal h2 {
+        font-size: 1.1rem;
+        font-weight: 800;
+        margin-bottom: 20px;
+        display: flex; align-items: center; gap: 8px;
+    }
+
+    .mf-group { margin-bottom: 14px; }
+    .mf-group label {
+        display: block;
+        font-size: .75rem;
+        font-weight: 700;
+        color: var(--tx3);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 6px;
+    }
+
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .chip-btn {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 6px 14px;
+        font-family: var(--font-ar);
+        font-size: .82rem;
+        font-weight: 700;
+        cursor: pointer;
+        color: var(--tx2);
+        transition: all .15s;
+    }
+    .chip-btn:hover { border-color: var(--border2); color: var(--tx); }
+    .chip-btn.active {
+        background: linear-gradient(135deg, var(--p), var(--p3));
+        border-color: var(--p);
+        color: #fff;
+        box-shadow: 0 2px 10px rgba(99,102,241,.4);
+    }
+
+    /* ══ TOAST ════════════════════════════════════════ */
+    .toast-wrap {
+        position: fixed; bottom: 28px; left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999; pointer-events: none;
+        display: flex; flex-direction: column; align-items: center; gap: 8px;
+    }
+    .toast {
+        background: var(--card2);
+        border: 1px solid var(--border2);
+        border-radius: var(--r);
+        padding: 11px 22px;
+        font-size: .88rem;
+        color: var(--tx);
+        box-shadow: 0 8px 24px rgba(0,0,0,.4), var(--glow-p);
+        animation: toastIn .3s cubic-bezier(0.175,0.885,0.32,1.275);
+        white-space: nowrap;
+    }
+    @keyframes toastIn {
+        from { opacity:0; transform:translateY(12px) scale(.9); }
+        to   { opacity:1; transform:translateY(0)    scale(1);  }
+    }
+
+    /* ══ UTILITY ══════════════════════════════════════ */
+    .sec-label {
+        font-size: .7rem;
+        font-weight: 700;
+        color: var(--tx3);
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        margin-bottom: 10px;
+    }
+
+    .rank-pill {
+        display: inline-flex; align-items: center; gap: 5px;
+        border-radius: 20px; padding: 3px 11px;
+        font-size: .75rem; font-weight: 700;
+        border: 1px solid; margin-top: 4px;
+    }
+
+    .xp-bar-wrap { background: var(--surface); border-radius: 4px; height: 4px; overflow: hidden; }
+    .xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--p), var(--v)); border-radius: 4px; transition: width .8s; }
+
+    /* ══ PWA BANNER ═══════════════════════════════════ */
+    #pwa-banner {
+        position: fixed; bottom:0; left:0; right:0;
+        background: rgba(7,7,15,.92);
+        border-top: 1px solid var(--border2);
+        backdrop-filter: blur(20px);
+        padding: 12px 18px;
+        display: flex; align-items: center; gap: 12px;
+        z-index: 9000;
+        box-shadow: 0 -4px 20px rgba(0,0,0,.4);
+    }
+    #pwa-banner img { width:38px;height:38px;border-radius:10px;flex-shrink:0; }
+    #pwa-banner .pt { flex:1; }
+    #pwa-banner .pt b { display:block;font-size:.88rem; }
+    #pwa-banner .pt s { font-size:.74rem;color:var(--tx3);font-style:normal; }
+    #pwa-install-btn {
+        background: linear-gradient(135deg, var(--p), var(--p3));
+        color:#fff; border:none; border-radius:9px;
+        padding:8px 16px; font-family:var(--font-ar);
+        font-size:.82rem; font-weight:700; cursor:pointer;
+        white-space:nowrap;
+        box-shadow: 0 3px 12px rgba(99,102,241,.4);
+    }
+    #pwa-dismiss-btn { background:none;border:none;color:var(--tx3);font-size:1.1rem;cursor:pointer;padding:4px 8px; }
+    #ios-banner {
+        position:fixed;bottom:0;left:0;right:0;
+        background:rgba(7,7,15,.92);border-top:1px solid var(--border2);
+        backdrop-filter:blur(20px);padding:14px 18px;z-index:9000;text-align:center;
+    }
+    #ios-banner span { color:var(--gold2);font-weight:700; }
+    #ios-close { position:absolute;top:10px;left:12px;background:none;border:none;color:var(--tx3);font-size:1.1rem;cursor:pointer; }
+
+    /* ══ SHIMMER LOADING ══════════════════════════════ */
+    .shimmer {
+        background: linear-gradient(90deg, var(--card) 25%, var(--card2) 50%, var(--card) 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        border-radius: var(--r);
+    }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+
     {% block extra_css %}{% endblock %}
+    </style>
 </head>
 <body>
-    <nav>
-        <a href="/" class="nav-logo">🎯 Guess Up</a>
-        <div class="nav-info">
-            {% if session.player_name %}
-                <span>👤 {{ session.player_name }}</span>
-                <span class="points-badge">
-                    💰 <span id="nav-points">{{ player.points if player else '' }}</span>
-                </span>
-                <a href="/leaderboard" class="btn btn-ghost" style="padding:6px 12px;font-size:0.8rem">🏆 ترتيب</a>
 
-                <!-- Friends -->
-                <a href="/friends" style="text-decoration:none;font-size:1.1rem;position:relative;padding:4px 6px" title="الأصدقاء">👥</a>
-
-                <!-- Notification Bell -->
-                <a href="/notifications" id="nav-bell" style="text-decoration:none;font-size:1.1rem;position:relative;padding:4px 6px" title="الإشعارات">
-                    🔔
-                    <span id="notif-badge" style="
-                        display:none;position:absolute;top:-4px;right:-2px;
-                        background:#ef4444;color:#fff;border-radius:50%;
-                        width:17px;height:17px;font-size:.6rem;font-weight:900;
-                        align-items:center;justify-content:center;
-                    "></span>
-                </a>
-
-                <a href="/logout" class="btn btn-ghost" style="padding:6px 12px;font-size:0.8rem;color:var(--red)">خروج 🚪</a>
-            {% endif %}
-        </div>
-    </nav>
-
-    {% block content %}{% endblock %}
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
-    {% block scripts %}{% endblock %}
-
-<!-- PWA Install Banner -->
-<div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;
-    background:rgba(30,27,46,.97);border-top:1px solid rgba(124,58,237,.5);
-    padding:12px 16px;z-index:9000;display:none;align-items:center;gap:12px">
-    <img src="/static/icons/icon-96x96.png" style="width:38px;height:38px;border-radius:9px;flex-shrink:0">
-    <div style="flex:1">
-        <div style="font-weight:700;font-size:.88rem">📲 ثبّت Guess Up</div>
-        <div style="font-size:.75rem;color:#64748b">العب بدون متصفح</div>
+{% if session.player_id %}
+<nav>
+    <a href="/lobby" class="nav-logo">
+        <span class="logo-icon">🎯</span>
+        Guess<span class="logo-text">Up</span>
+    </a>
+    <div class="nav-right">
+        {% set me = get_player() %}
+        {% if me %}
+        <span class="nav-pts">{{ me.points }} <span style="color:var(--tx3);font-weight:400">pts</span></span>
+        <a href="/friends" class="nav-link" title="الأصدقاء">👥</a>
+        <a href="/notifications" id="nav-bell" class="nav-link" title="الإشعارات">
+            🔔
+            <span id="notif-badge"></span>
+        </a>
+        <a href="/player/{{ session.player_id }}" class="nav-name">{{ session.player_name }}</a>
+        {% endif %}
+        <form action="/logout" method="get" style="display:inline">
+            <button class="btn-logout" title="خروج">⏻</button>
+        </form>
     </div>
-    <button id="pwa-install-btn" style="background:#7c3aed;color:#fff;border:none;
-        border-radius:8px;padding:7px 14px;font-family:'Cairo',sans-serif;
-        font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap">تثبيت ⚡</button>
-    <button id="pwa-dismiss-btn" style="background:none;border:none;color:#64748b;
-        font-size:1.2rem;cursor:pointer;padding:4px 8px">✕</button>
+</nav>
+{% endif %}
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+{% block content %}{% endblock %}
+
+<!-- PWA -->
+<div id="pwa-banner" style="display:none">
+    <img src="/static/icons/icon-96x96.png" alt="">
+    <div class="pt"><b>📲 ثبّت Guess Up</b><s>العب بدون متصفح</s></div>
+    <button id="pwa-install-btn">تثبيت ⚡</button>
+    <button id="pwa-dismiss-btn">✕</button>
+</div>
+<div id="ios-banner" style="display:none">
+    <button id="ios-close" onclick="closePwa()">✕</button>
+    <p style="font-size:.88rem;margin-bottom:4px">اضغط <span>⬆️ Share</span> ثم <span>Add to Home Screen</span></p>
 </div>
 
-<div id="ios-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;
-    background:rgba(30,27,46,.97);border-top:1px solid rgba(124,58,237,.5);
-    padding:14px 16px;z-index:9000;text-align:center">
-    <button onclick="closePwa()" style="position:absolute;top:10px;left:12px;background:none;
-        border:none;color:#64748b;font-size:1.1rem;cursor:pointer">✕</button>
-    <p style="font-size:.88rem;margin-bottom:4px">اضغط
-        <span style="color:#f59e0b;font-weight:700">⬆️ Share</span> ثم
-        <span style="color:#f59e0b;font-weight:700">Add to Home Screen</span>
-    </p>
-    <small style="color:#64748b;font-size:.75rem">عشان تثبّت Guess Up زي تطبيق عادي</small>
-</div>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
 <script>
-if('serviceWorker' in navigator)
-    navigator.serviceWorker.register('/static/sw.js').catch(function(){});
+// Toast
+function showToast(msg, dur) {
+    dur = dur || 2800;
+    var w = document.getElementById('toastWrap');
+    var t = document.createElement('div');
+    t.className = 'toast'; t.textContent = msg;
+    w.appendChild(t);
+    setTimeout(function(){
+        t.style.opacity='0'; t.style.transform='translateY(8px)';
+        t.style.transition='all .25s';
+        setTimeout(function(){t.remove();}, 250);
+    }, dur);
+}
+// Notifications badge
+function updateNotifBadge(){
+    fetch('/api/notifications/count').then(function(r){return r.json();}).then(function(d){
+        var b=document.getElementById('notif-badge');
+        if(!b) return;
+        if(d.count>0){b.textContent=d.count>9?'9+':d.count;b.style.display='inline-flex';}
+        else{b.style.display='none';}
+    }).catch(function(){});
+}
+updateNotifBadge();
+setInterval(updateNotifBadge,30000);
+// SW
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/static/sw.js').catch(function(){});
+// PWA
 var _p=null;
 function _wd(){try{var d=localStorage.getItem('pwa_d');return d&&(Date.now()-d)<604800000;}catch(e){return false;}}
 function closePwa(){
@@ -287,132 +578,49 @@ function closePwa(){
 }
 window.addEventListener('beforeinstallprompt',function(e){
     e.preventDefault();_p=e;
-    if(!_wd()) setTimeout(function(){document.getElementById('pwa-banner').style.display='flex';},2500);
+    if(!_wd()) setTimeout(function(){document.getElementById('pwa-banner').style.display='flex';},3000);
 });
-document.getElementById('pwa-install-btn').onclick=function(){
-    if(!_p)return;_p.prompt();
-    _p.userChoice.then(function(){document.getElementById('pwa-banner').style.display='none';_p=null;});
-};
+var _ib=document.getElementById('pwa-install-btn');
+if(_ib)_ib.onclick=function(){if(!_p)return;_p.prompt();_p.userChoice.then(function(){document.getElementById('pwa-banner').style.display='none';_p=null;});};
 document.getElementById('pwa-dismiss-btn').onclick=closePwa;
 if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.navigator.standalone&&!_wd())
-    setTimeout(function(){document.getElementById('ios-banner').style.display='block';},2500);
+    setTimeout(function(){document.getElementById('ios-banner').style.display='block';},3000);
 window.addEventListener('appinstalled',function(){document.getElementById('pwa-banner').style.display='none';});
-</script>
-
-
-<script>
-// ── Notification Badge ──────────────────────────────
-function updateNotifBadge(){
-    fetch('/api/notifications/count').then(function(r){return r.json();}).then(function(d){
-        var b = document.getElementById('notif-badge');
-        if(!b) return;
-        if(d.count > 0){
-            b.textContent = d.count > 9 ? '9+' : d.count;
-            b.style.display = 'inline-flex';
-        } else {
-            b.style.display = 'none';
-        }
-    }).catch(function(){});
-}
-// نحدث الـ badge كل 30 ثانية
-updateNotifBadge();
-setInterval(updateNotifBadge, 30000);
-
-// ── Real-time: انضم لـ personal room عشان تستقبل notifications ──
-document.addEventListener('DOMContentLoaded', function(){
-    if(typeof io === 'undefined') return;
-    // لو socket مش متعمل لسا — نستنى
-    function tryJoinPersonal(){
-        if(typeof socket !== 'undefined' && socket.connected){
-            socket.emit('join_personal_room', {});
-        } else {
-            setTimeout(tryJoinPersonal, 500);
-        }
-    }
-    tryJoinPersonal();
-});
-
-// ── استقبال notification real-time ──
-document.addEventListener('DOMContentLoaded', function(){
-    if(typeof io === 'undefined') return;
+// Real-time notifications
+document.addEventListener('DOMContentLoaded',function(){
+    if(typeof io==='undefined') return;
     function listenNotifs(){
-        if(typeof socket === 'undefined'){ setTimeout(listenNotifs, 500); return; }
-        socket.on('new_notification', function(data){
-            // حدّث الـ badge
-            var b = document.getElementById('notif-badge');
-            if(b){
-                var cur = parseInt(b.textContent) || 0;
-                b.textContent = cur + 1;
-                b.style.display = 'inline-flex';
+        if(typeof socket==='undefined'){setTimeout(listenNotifs,500);return;}
+        socket.emit('join_personal_room',{});
+        socket.on('new_notification',function(data){
+            var b=document.getElementById('notif-badge');
+            if(b){var c=parseInt(b.textContent)||0;b.textContent=c+1;b.style.display='inline-flex';}
+            showNotifToast(data.title,data.body,data.link);
+            if(Notification.permission==='granted'){
+                var n=new Notification(data.title,{body:data.body,icon:'/static/icons/icon-96x96.png'});
+                n.onclick=function(){if(data.link)window.location.href=data.link;};
             }
-            // Toast notification
-            showNotifToast(data.title, data.body, data.link);
-            // Browser Push لو supported
-            sendBrowserPush(data.title, data.body, data.link);
         });
-        socket.on('new_chat_msg', function(data){
-            // لو مش في صفحة الشات بتاعت المرسل
-            if(window.location.pathname !== '/chat/'+data.from_id){
-                showNotifToast('💬 '+data.from_name, data.text, '/chat/'+data.from_id);
-                var b = document.getElementById('notif-badge');
-                if(b){
-                    var cur = parseInt(b.textContent)||0;
-                    b.textContent = cur+1; b.style.display='inline-flex';
-                }
+        socket.on('new_chat_msg',function(data){
+            if(window.location.pathname!=='/chat/'+data.from_id){
+                showNotifToast('💬 '+data.from_name,data.text,'/chat/'+data.from_id);
             }
         });
     }
     listenNotifs();
 });
-
-// ── Toast للـ notifications ──
-function showNotifToast(title, body, link){
-    var t = document.createElement('div');
-    t.style.cssText = [
-        'position:fixed','top:70px','left:50%','transform:translateX(-50%)',
-        'background:rgba(30,27,46,.97)','border:1px solid rgba(124,58,237,.4)',
-        'border-radius:12px','padding:12px 18px','z-index:8999',
-        'cursor:pointer','max-width:320px','width:90%',
-        'box-shadow:0 4px 20px rgba(0,0,0,.4)',
-        'animation:notifSlide .3s ease'
-    ].join(';');
-    t.innerHTML = '<div style="font-weight:700;font-size:.88rem;margin-bottom:3px">'+title+'</div>'
-                + '<div style="font-size:.8rem;color:#94a3b8">'+body+'</div>';
-    if(link) t.onclick = function(){ window.location.href = link; };
-    if(!document.getElementById('notifToastStyle')){
-        var s = document.createElement('style');
-        s.id = 'notifToastStyle';
-        s.textContent = '@keyframes notifSlide{from{opacity:0;transform:translateX(-50%) translateY(-10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';
-        document.head.appendChild(s);
-    }
+function showNotifToast(title,body,link){
+    var t=document.createElement('div');
+    t.style.cssText='position:fixed;top:68px;left:50%;transform:translateX(-50%);background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);padding:12px 18px;z-index:8999;cursor:pointer;max-width:320px;width:90%;box-shadow:0 8px 24px rgba(0,0,0,.5);animation:slideUp .3s ease;backdrop-filter:blur(10px)';
+    t.innerHTML='<div style="font-weight:700;font-size:.86rem;margin-bottom:2px">'+title+'</div><div style="font-size:.78rem;color:var(--tx2)">'+body+'</div>';
+    if(link)t.onclick=function(){window.location.href=link;};
     document.body.appendChild(t);
-    setTimeout(function(){ t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(function(){t.remove();},300); }, 4000);
+    setTimeout(function(){t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(function(){t.remove();},300);},4500);
 }
-
-// ── Browser Push Notification ──
-function sendBrowserPush(title, body, link){
-    if(!('Notification' in window)) return;
-    if(Notification.permission === 'granted'){
-        var n = new Notification(title, {
-            body:  body,
-            icon:  '/static/icons/icon-96x96.png',
-            badge: '/static/icons/icon-72x72.png',
-            tag:   'guessup-notif',
-            data:  { url: link }
-        });
-        n.onclick = function(){ window.focus(); if(link) window.location.href=link; };
-    }
+if('Notification' in window&&Notification.permission==='default'){
+    setTimeout(function(){Notification.requestPermission();},4000);
 }
-
-// اطلب إذن الـ push notifications عند الدخول
-window.addEventListener('load', function(){
-    if('Notification' in window && Notification.permission === 'default'){
-        setTimeout(function(){
-            Notification.requestPermission();
-        }, 3000);
-    }
-});
 </script>
-
+{% block scripts %}{% endblock %}
 </body>
 </html>
